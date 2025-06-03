@@ -8,7 +8,7 @@ import os
 from typing import Any, Iterable
 import dotenv
 
-from langchain_aws import BedrockLLM
+from langchain_aws import ChatBedrock
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_vertexai import ChatVertexAI
@@ -105,41 +105,40 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
-    credentials_profile = os.getenv("AWS_BEDROCK_PROFILE") or os.getenv("AWS_PROFILE") or None
-    model_id = os.getenv("BEDROCK_MODEL_ID")
-    logging.info(f"[LLM] Bedrock model={model_id} profile={credentials_profile}")
+    credentials_profile = os.getenv("AWS_PROFILE") or None
+    model_id = os.getenv("AWS_BEDROCK_MODEL_ID")
+    provider = os.getenv("AWS_BEDROCK_PROVIDER")
+    region_name = os.getenv("AWS_REGION")
 
-    try:
-      result = subprocess.run(
-        ["aws", "sts", "get-caller-identity"],
-        capture_output=True,
-        text=True,
-        check=True,
-        env=os.environ.copy() if credentials_profile is None else {**os.environ, "AWS_PROFILE": credentials_profile},
+    missing_vars = []
+    if not model_id:
+      missing_vars.append("AWS_BEDROCK_MODEL_ID")
+    if not region_name:
+      missing_vars.append("AWS_REGION")
+    if missing_vars:
+      raise EnvironmentError(
+        f"Missing the following AWS Bedrock environment variable(s): {', '.join(missing_vars)}."
       )
-      session_info = json.loads(result.stdout)
-      logging.info(
-        f"[LLM] Using AWS session: UserId={session_info.get('UserId')}, "
-        f"Account={session_info.get('Account')}, Arn={session_info.get('Arn')}"
-      )
-    except Exception as e:
-      logging.warning(f"[LLM] Unable to get AWS session info: {e}")
+    logging.info(f"[LLM] Bedrock model={model_id} profile={credentials_profile} region={region_name}")
+
     model_kwargs = {"response_format": response_format} if response_format else {}
+
+    bedrock_args = {
+      "model_id": model_id,
+      "provider": provider if provider else "amazon",
+      "region_name": region_name,
+      "temperature": temperature if temperature is not None else 0,
+      "streaming": True,
+      "beta_use_converse_api": True,  # Use Converse API for better performance
+      "model_kwargs": model_kwargs,
+      **kwargs,
+    }
     if credentials_profile:
-      return BedrockLLM(
-        credentials_profile_name=credentials_profile,
-        model_id=model_id,
-        temperature=temperature if temperature is not None else 0,
-        model_kwargs=model_kwargs,
-        **kwargs,
-      )
-    else:
-      return BedrockLLM(
-        model_id=model_id,
-        temperature=temperature if temperature is not None else 0,
-        model_kwargs=model_kwargs,
-        **kwargs,
-      )
+      bedrock_args["credentials_profile_name"] = credentials_profile
+    if region_name:
+      bedrock_args["region_name"] = region_name
+
+    return ChatBedrock(**bedrock_args)
 
   def _build_anthropic_claude_llm(
     self,
@@ -163,8 +162,6 @@ class LLMFactory:
       model_name=model_name,
       anthropic_api_key=api_key,
       temperature=temperature if temperature is not None else 0,
-      max_tokens=None,
-      timeout=None,
       model_kwargs=model_kwargs,
       **kwargs,
     )
@@ -219,7 +216,7 @@ class LLMFactory:
     **kwargs,
   ):
     api_key = os.getenv("OPENAI_API_KEY")
-    base_url = os.getenv("OPENAI_ENDPOINT")
+    base_url = os.getenv("OPENAI_ENDPOINT", "https://api.openai.com/v1")
     model_name = os.getenv("OPENAI_MODEL_NAME")
 
     missing_vars = []
@@ -273,24 +270,36 @@ class LLMFactory:
 
 
 
-  def _build_google_vertexai_llm(
+  def _build_gcp_vertexai_llm(
     self,
     response_format: str | dict | None,
     temperature: float | None,
     **kwargs,
   ):
+    import google.auth
 
-    model_name = os.getenv("VERTEXAI_MODEL_NAME", "gemini-1.5-flash-001")
-    project = os.getenv("VERTEXAI_PROJECT")
-    location = os.getenv("VERTEXAI_LOCATION", "us-central1")
+    # Check for credentials
+    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    try:
+      credentials, _ = google.auth.default()
+      logging.info(f"[LLM] Google VertexAI credentials loaded successfully")
+    except Exception as e:
+      raise EnvironmentError(
+        "Could not load Google Cloud credentials. "
+        "Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the path of your service account JSON file. "
+        f"Original error: {e}"
+      )
 
-    logging.info(f"[LLM] Google VertexAI model={model_name} project={project} location={location}")
+    model_name = os.getenv("VERTEXAI_MODEL_NAME")
+    if not model_name:
+      raise EnvironmentError("VERTEXAI_MODEL_NAME environment variable is required")
+
+    logging.info(f"[LLM] Google VertexAI model={model_name}")
 
     model_kwargs = {"response_format": response_format} if response_format else {}
     return ChatVertexAI(
       model=model_name,
-      project=project,
-      location=location,
+      credentials=credentials,
       temperature=temperature if temperature is not None else 0,
       max_tokens=None,
       max_retries=6,

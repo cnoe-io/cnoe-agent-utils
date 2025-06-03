@@ -1,6 +1,5 @@
 # Copyright 2025 CNOE
 # SPDX-License-Identifier: Apache-2.0
-
 """
 ===============================================================================
  test_google_gemini.py - Example usage of Google Gemini via cnoe-agent-utils
@@ -8,10 +7,11 @@
 
 This open source example demonstrates how to use the `cnoe-agent-utils` library
 to interact with the Gemini model via the Google API. It loads required
-configuration from environment variables, initializes the LLMFactory
-for Google Gemini, and invokes the model with a sample prompt.
+configuration from environment variables, which can be set directly or loaded
+from a `.env` file in the project directory. The script initializes the
+LLMFactory for Google Gemini and invokes the model with a sample prompt.
 
-Environment Variables:
+Environment Variables (can be set in a .env file):
   - GOOGLE_API_KEY: Google API key for Gemini access.
   - GOOGLE_GEMINI_MODEL_NAME: (Optional) Gemini model name (default: gemini-2.0-flash).
 
@@ -19,8 +19,8 @@ Raises:
   EnvironmentError: If any required environment variables are missing.
 
 Example:
-  $ export GOOGLE_API_KEY=your-google-api-key
-  $ export GOOGLE_GEMINI_MODEL_NAME=gemini-2.0-flash
+  $ echo "GOOGLE_API_KEY=your-google-api-key" >> .env
+  $ echo "GOOGLE_GEMINI_MODEL_NAME=gemini-2.0-flash" >> .env
   $ python test_google_gemini.py
 
 Dependencies:

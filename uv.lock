@@ -1,6 +1,6 @@
 version = 1
 revision = 1
-requires-python = ">=3.13"
+requires-python = ">=3.13, <4.0"
 
 [[package]]
 name = "annotated-types"
@@ -163,6 +163,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "dotenv" },
+    { name = "google-auth" },
     { name = "langchain-anthropic" },
     { name = "langchain-aws" },
     { name = "langchain-google-genai" },
@@ -173,6 +174,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "dotenv", specifier = ">=0.9.9,<0.10.0" },
+    { name = "google-auth", specifier = ">=2.40.2,<3.0.0" },
     { name = "langchain-anthropic", specifier = ">=0.3.14" },
     { name = "langchain-aws", specifier = ">=0.2.24,<0.3.0" },
     { name = "langchain-google-genai", specifier = ">=2.1.5" },
