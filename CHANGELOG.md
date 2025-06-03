@@ -1,3 +1,11 @@
+## 0.1.2 (2025-06-03)
+
+### Fix
+
+- update README.md
+- sign-off
+- changelog
+
 ## 0.1.1 (2025-06-03)
 
 ### Fix
