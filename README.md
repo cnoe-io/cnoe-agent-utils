@@ -31,6 +31,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
+### ⚡ Prerequisite: Install `uv`
+
+Before running the examples, install [`uv`](https://github.com/astral-sh/uv):
+
+```bash
+pip install uv
+```
+
 ### 📦 Installation
 
 ```bash
