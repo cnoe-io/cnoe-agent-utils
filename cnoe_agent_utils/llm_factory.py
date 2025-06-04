@@ -105,11 +105,40 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
-    credentials_profile = os.getenv("AWS_PROFILE") or None
+    aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    credentials_profile = None
+    if not (aws_access_key_id and aws_secret_access_key):
+      credentials_profile = os.getenv("AWS_PROFILE") or None
+      logging.info("[LLM] Using AWS credentials from profile: %s", credentials_profile)
+    else:
+      logging.info("[LLM] Using AWS credentials from environment variables")
+
     model_id = os.getenv("AWS_BEDROCK_MODEL_ID")
     provider = os.getenv("AWS_BEDROCK_PROVIDER")
     region_name = os.getenv("AWS_REGION")
 
+    aws_debug = os.getenv("AWS_CREDENTIALS_DEBUG", "false").lower() == "true"
+    if aws_debug:
+      import boto3
+      try:
+        session_kwargs = {}
+        if aws_access_key_id and aws_secret_access_key:
+          session = boto3.Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=region_name
+          )
+        elif credentials_profile:
+          session = boto3.Session(profile_name=credentials_profile, region_name=region_name)
+        else:
+          session = boto3.Session(region_name=region_name)
+        sts = session.client("sts", region_name=region_name)
+        identity = sts.get_caller_identity()
+        arn = identity.get("Arn")
+        logging.info(f"[LLM][AWS_DEBUG] STS Arn: {arn}")
+      except Exception as e:
+        logging.warning(f"[LLM][AWS_DEBUG] Failed to get AWS STS caller identity: {e}")
     missing_vars = []
     if not model_id:
       missing_vars.append("AWS_BEDROCK_MODEL_ID")
@@ -126,6 +155,8 @@ class LLMFactory:
     bedrock_args = {
       "model_id": model_id,
       "provider": provider if provider else "amazon",
+      "aws_access_key_id": aws_access_key_id,
+      "aws_secret_access_key": aws_secret_access_key,
       "region_name": region_name,
       "temperature": temperature if temperature is not None else 0,
       "streaming": True,
