@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # Type variable for async generator functions
 AsyncStreamFunc = TypeVar('AsyncStreamFunc', bound=Callable[..., AsyncIterable[dict[str, Any]]])
 
-def trace_agent_stream(agent_name: str) -> Callable[[AsyncStreamFunc], AsyncStreamFunc]:
+def trace_agent_stream(agent_name: str, trace_name: Optional[str] = "ai-platform-engineer") -> Callable[[AsyncStreamFunc], AsyncStreamFunc]:
     """
     Decorator that replaces ALL the duplicated tracing code in agent stream methods.
     
@@ -53,12 +53,18 @@ def trace_agent_stream(agent_name: str) -> Callable[[AsyncStreamFunc], AsyncStre
     
     Args:
         agent_name: Name of the agent (e.g., "argocd", "jira", "slack")
+        trace_name: Custom name for the trace (defaults to "ai-platform-engineer")
         
     Returns:
         Decorated function with automatic tracing
         
     Usage:
+        # Basic usage (uses default trace name "ai-platform-engineer")
         @trace_agent_stream("slack") 
+        async def stream(self, query: str, context_id: str, trace_id: str = None):
+        
+        # With custom trace name
+        @trace_agent_stream("slack", trace_name="Custom Workflow")
         async def stream(self, query: str, context_id: str, trace_id: str = None):
             # Agent keeps ORIGINAL logic - just remove duplicated tracing setup:
             
@@ -112,7 +118,8 @@ def trace_agent_stream(agent_name: str) -> Callable[[AsyncStreamFunc], AsyncStre
                     agent_type=agent_name,
                     query=query,
                     context_id=context_id,
-                    trace_id=trace_id
+                    trace_id=trace_id,
+                    trace_name=trace_name
                 ) as span:
                     # Agent executes with original logic - capture meaningful responses
                     final_response_content = None

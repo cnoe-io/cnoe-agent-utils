@@ -24,9 +24,14 @@ Usage:
         def __init__(self):
             self.tracing = TracingManager()  # Handles conditional imports
         
-        @trace_agent_stream("myagent")  # Eliminates tracing duplication
+        @trace_agent_stream("myagent")  # Default trace name: "ai-platform-engineer"
         async def stream(self, query, context_id, trace_id=None):
             # Just agent logic - tracing handled automatically
+            pass
+            
+        @trace_agent_stream("myagent", trace_name="Custom Workflow")  # Custom trace name
+        async def stream_custom(self, query, context_id, trace_id=None):
+            # Agent logic with custom trace name
             pass
 """
 

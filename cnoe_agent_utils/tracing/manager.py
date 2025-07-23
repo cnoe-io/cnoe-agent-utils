@@ -157,7 +157,8 @@ class TracingManager:
         agent_type: str,
         query: str, 
         context_id: str, 
-        trace_id: Optional[str] = None
+        trace_id: Optional[str] = None,
+        trace_name: Optional[str] = None
     ) -> 'SpanContextManager':
         """
         Start a new trace span if tracing is enabled.
@@ -171,6 +172,7 @@ class TracingManager:
             query: User query being processed
             context_id: Context/thread ID
             trace_id: Optional trace ID from supervisor
+            trace_name: Optional custom name for the trace (defaults to "ai-platform-engineer")
             
         Returns:
             Context manager for the span (no-op if tracing disabled)
@@ -188,10 +190,11 @@ class TracingManager:
             return LangfuseSpanContextManager(
                 langfuse_client=self._langfuse_client,
                 name=name,
-                  query=query,
+                query=query,
                 agent_type=agent_type,
                 context_id=context_id,
-                trace_id=trace_id
+                trace_id=trace_id,
+                trace_name=trace_name
             )
             
         except Exception as e:
@@ -203,13 +206,14 @@ class LangfuseSpanContextManager:
     """Context manager wrapper for Langfuse span context."""
     
     def __init__(self, langfuse_client: Any, name: str, query: str, agent_type: str, 
-                 context_id: str, trace_id: Optional[str]) -> None:
+                 context_id: str, trace_id: Optional[str], trace_name: Optional[str] = None) -> None:
         self.langfuse_client = langfuse_client
         self.name = name
         self.query = query
         self.agent_type = agent_type
         self.context_id = context_id
         self.trace_id = trace_id
+        self.trace_name = trace_name or "ai-platform-engineer"
         self._context = None
         self._span = None
     
@@ -227,6 +231,7 @@ class LangfuseSpanContextManager:
         # Update trace with initial metadata
         try:
             self._span.update_trace(
+                name=self.trace_name,
                 input=self.query,
                 metadata={
                     "agent_type": self.agent_type,
