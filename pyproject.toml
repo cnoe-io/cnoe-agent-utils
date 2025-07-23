@@ -1,12 +1,21 @@
 [project]
 name = "cnoe-agent-utils"
-version = "0.1.4"
-description = ""
+version = "0.2.0"
+description = "Core utilities for CNOE agents including LLM factory and tracing"
 authors = [
-    {name = "Sri Aradhyula",email = "sraradhy@cisco.com"}
+    {name = "CNOE Contributors"}
 ]
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
+keywords = ["cnoe", "agents", "llm", "tracing", "observability"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "dotenv (>=0.9.9,<0.10.0)",
     "langchain-anthropic>=0.3.14",
@@ -15,6 +24,17 @@ dependencies = [
     "langchain-google-vertexai>=2.0.24",
     "langchain-openai>=0.3.18",
     "google-auth (>=2.40.2,<3.0.0)",
+    "langfuse>=3.0.0,<4.0.0",
+]
+
+[project.optional-dependencies]
+# Development dependencies
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0", 
+    "pytest-cov>=4.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
 ]
 
 
