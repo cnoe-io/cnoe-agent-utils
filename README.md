@@ -6,7 +6,7 @@
 
 * **Reusable utilities and abstractions** for building agent-based (LLM-powered) systems.
 * **Centralized LLM Factory** supporting major providers (AWS, Azure, GCP, OpenAI, Gemini, Anthropic).
-* **Centralized Tracing Utilities** (since v0.2.0) to eliminate duplicated tracing code across CNOE agents, including A2A disabling and stream tracing.
+* **Centralized Tracing Utilities** (since v0.2.0) to eliminate duplicated tracing code across CNOE agents.
 
 ## Key Features
 
@@ -33,7 +33,7 @@
 
 ---
 
-**Note:** Checkout this tutorial on [Tracking](TRACING.md)
+**Note:** Checkout this tutorial on [Tracing](TRACING.md)
 
 ## 🚀 LLM Factory Getting Started
 
