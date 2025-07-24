@@ -7,7 +7,7 @@
 Before v0.2.0, every CNOE agent had identical duplicated code:
 
 - **Conditional imports** - Each agent repeated `if ENABLE_TRACING: import langfuse`
-- **A2A disabling** - 70+ lines of identical monkey patching in every agent  
+- **A2A disabling** - 70+ lines of identical monkey patching in every agent
 - **Stream tracing logic** - 100+ lines of span management in every stream method
 - **Environment checking** - Repeated environment variable handling
 
@@ -84,17 +84,17 @@ from cnoe_agent_utils.tracing import trace_agent_stream
 @trace_agent_stream("slack")  # or "argocd", "jira", etc.
 async def stream(self, query, context_id, trace_id=None):
     # Agent keeps ORIGINAL logic - just remove tracing setup:
-    
+
     inputs = {'messages': [HumanMessage(content=query)]}
     config = self.tracing.create_config(context_id)  # Handles callbacks automatically
-    
+
     # Original graph.astream() logic - NO CHANGES:
     async for item in self.graph.astream(inputs, config, stream_mode='values'):
         message = item.get('messages', [])[-1] if item.get('messages') else None
         if isinstance(message, AIMessage) and message.tool_calls:
             yield {'is_task_complete': False, 'content': 'Processing...'}
         # ... rest of original logic
-    
+
     yield self.get_agent_response(config)
 ```
 
@@ -113,19 +113,19 @@ class SlackAgent:
     def __init__(self):
         self.llm = LLMFactory().get_llm()
         self.tracing = TracingManager()
-    
+
     @trace_agent_stream("slack")
     async def stream(self, query: str, context_id: str, trace_id: str = None):
         """Stream method with automatic tracing - zero duplication."""
-        
+
         inputs = {'messages': [HumanMessage(content=query)]}
         config = self.tracing.create_config(context_id)
-        
+
         # Your original agent logic - NO CHANGES needed
         async for item in self.graph.astream(inputs, config, stream_mode='values'):
             # ... your existing message processing logic
             yield event
-        
+
         yield self.get_agent_response(config)
 ```
 
@@ -144,14 +144,14 @@ dependencies = [
 ### What to Change per Agent
 
 1. ➕ **Add decorator**: `@trace_agent_stream("agent_name")`
-2. ➖ **Delete conditional import block** (23-29 lines)  
+2. ➖ **Delete conditional import block** (23-29 lines)
 3. 🔄 **Replace config setup**: `config = self.tracing.create_config(context_id)`
 4. ➖ **Delete all tracing setup/span creation code** (50+ lines)
 
 ### What Stays the Same
 
 - ✅ Original `graph.astream()` loops
-- ✅ Original message processing logic  
+- ✅ Original message processing logic
 - ✅ Original `get_agent_response()` calls
 - ✅ Original error handling
 

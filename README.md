@@ -4,23 +4,38 @@
 [![Publish Python Package](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml)
 [![commit-msg](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/conventional_commits.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/conventional_commits.yml)
 
-**cnoe-agent-utils** is an open-source Python library providing utility functions and abstractions for building agent-based systems, including LLM (Large Language Model) factories and integrations.
+* **Reusable utilities and abstractions** for building agent-based (LLM-powered) systems.
+* **Centralized LLM Factory** supporting major providers (AWS, Azure, GCP, OpenAI, Gemini, Anthropic).
+* **Centralized Tracing Utilities** (since v0.2.0) to eliminate duplicated tracing code across CNOE agents, including A2A disabling and stream tracing.
+
+## Key Features
+
+### **Core Utilities**
+
+* Unified interface (LLM Factory) for seamless LLM instantiation across multiple clouds and vendors.
+  - 🏭 **LLM Factory** for easy model instantiation across:
+    - ☁️ AWS
+    - ☁️ Azure
+    - ☁️ GCP Vertex
+    - 🤖 Google Gemini
+    - 🤖 Anthropic Claude
+    - 🤖 OpenAI
+* Simple, environment-variable-driven configuration.
+* Example scripts for each LLM provider with setup instructions.
+
+### **Agent Tracing (since v0.2.0)**
+
+* **Centralized tracing logic:** Removes 350+ lines of repeated code per agent.
+* **Single import/decorator:** No more copy-pasting tracing logic.
+* **Environment-based toggling:** Use `ENABLE_TRACING` env var to control all tracing.
+* **A2A Tracing Disabling:** Single method to monkey-patch/disable agent-to-agent tracing everywhere.
+* **Graceful fallback:** Works with or without Langfuse; tracing is zero-overhead when disabled.
 
 ---
 
-## ✨ Features
+**Note:** Checkout this tutorial on [Tracking](TRACING.md)
 
-- 🏭 **LLM Factory** for easy model instantiation across:
-  - ☁️ AWS
-  - ☁️ Azure
-  - ☁️ GCP Vertex
-  - 🤖 Google Gemini
-  - 🤖 Anthropic Claude
-  - 🤖 OpenAI
-
----
-
-## 🚀 Getting Started
+## 🚀 LLM Factory Getting Started
 
 ### 🛡️ Create and Activate a Virtual Environment
 
