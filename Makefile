@@ -108,7 +108,7 @@ release: setup-venv  ## Bump version and create a release
 	@. .venv/bin/activate; cz changelog
 	@git add CHANGELOG.md
 	@git commit -m "docs: update changelog"
-	@. .venv/bin/activate; cz bump --increment PATCH
+	@. .venv/bin/activate; cz bump --increment MINOR
 	@echo "Version bumped and stable tag updated successfully."
 
 help:
