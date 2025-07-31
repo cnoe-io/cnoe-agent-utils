@@ -152,37 +152,3 @@ def trace_agent_stream(
                     
         return cast(AsyncStreamFunc, wrapper)
     return decorator
-
-
-def _is_generic_processing_message(content: str) -> bool:
-    """
-    Check if a message is a generic processing message that shouldn't be
-    captured as the final response in traces.
-    
-    Args:
-        content: Message content to check
-        
-    Returns:
-        bool: True if this is a generic processing message
-    """
-    generic_patterns = [
-        'Processing',
-        'Interacting with',
-        'Looking up', 
-        'Searching',
-        'Fetching',
-        '...',
-        'Please wait',
-        'Working on',
-        # Agent-specific generic messages
-        'Processing Slack operations',
-        'Interacting with Slack API',
-        'Processing ArgoCD operations', 
-        'Interacting with ArgoCD API',
-        'Processing Jira operations',
-        'Interacting with Jira API',
-        'Processing GitHub operations',
-        'Interacting with GitHub API',
-    ]
-    
-    return any(pattern in content for pattern in generic_patterns)
