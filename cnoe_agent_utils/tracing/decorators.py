@@ -38,7 +38,11 @@ logger = logging.getLogger(__name__)
 # Type variable for async generator functions
 AsyncStreamFunc = TypeVar('AsyncStreamFunc', bound=Callable[..., AsyncIterable[dict[str, Any]]])
 
-def trace_agent_stream(agent_name: str, trace_name: Optional[str] = "ai-platform-engineer") -> Callable[[AsyncStreamFunc], AsyncStreamFunc]:
+def trace_agent_stream(
+    agent_name: str, 
+    trace_name: Optional[str] = "ai-platform-engineer",
+    update_input: bool = False
+) -> Callable[[AsyncStreamFunc], AsyncStreamFunc]:
     """
     Decorator that replaces ALL the duplicated tracing code in agent stream methods.
     
@@ -54,6 +58,8 @@ def trace_agent_stream(agent_name: str, trace_name: Optional[str] = "ai-platform
     Args:
         agent_name: Name of the agent (e.g., "argocd", "jira", "slack")
         trace_name: Custom name for the trace (defaults to "ai-platform-engineer")
+        update_input: Whether to re-include the original input when updating trace with output 
+                     (defaults to False). Set to True to preserve input throughout trace lifecycle.
         
     Returns:
         Decorated function with automatic tracing
@@ -65,6 +71,10 @@ def trace_agent_stream(agent_name: str, trace_name: Optional[str] = "ai-platform
         
         # With custom trace name
         @trace_agent_stream("slack", trace_name="Custom Workflow")
+        async def stream(self, query: str, context_id: str, trace_id: str = None):
+        
+        # Preserve input throughout trace lifecycle
+        @trace_agent_stream("supervisor", update_input=True)
         async def stream(self, query: str, context_id: str, trace_id: str = None):
             # Agent keeps ORIGINAL logic - just remove duplicated tracing setup:
             
@@ -119,14 +129,14 @@ def trace_agent_stream(agent_name: str, trace_name: Optional[str] = "ai-platform
                     query=query,
                     context_id=context_id,
                     trace_id=trace_id,
-                    trace_name=trace_name
+                    trace_name=trace_name,
+                    update_input=update_input
                 ) as span:
-                    # Agent executes with original logic - capture meaningful responses
+                    # Agent executes with original logic - capture final response
                     final_response_content = None
                     async for event in stream_func(self, query, context_id, trace_id):
-                        # Capture actual AI responses (not generic processing messages)
-                        if (event.get('content') and 
-                            not _is_generic_processing_message(event.get('content', ''))):
+                        # Capture any content response
+                        if event.get('content'):
                             final_response_content = event.get('content')
                         yield event
                     
