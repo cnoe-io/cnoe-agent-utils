@@ -8,6 +8,11 @@ import os
 from typing import Any, Iterable
 import dotenv
 
+# Suppress specific unwanted logs before imports
+# Only suppress log messages, keep OpenTelemetry functionality intact
+for logger_name in ['numexpr.utils', 'opentelemetry', 'openinference']:
+    logging.getLogger(logger_name).setLevel(logging.ERROR)
+
 from langchain_aws import ChatBedrock
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
