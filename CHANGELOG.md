@@ -1,15 +1,11 @@
-## 0.2.1 (2025-07-31)
+## Unreleased
 
 ### Fix
 
-- **tracing**: Add `update_input` flag to control input tracking in traces
-- **tracing**: Fix bug where intermediate outputs overwrote original input in traces
-- **tracing**: Remove opinionated message filtering from trace decorator
-
-## 0.2.0 (2025-07-23)
-
-### Fix
-
+- remove the unused is_generic_processing_message
+- trace input does not match the user input
+- silence unwanted logs llmfactory
+- docs
 - update docs
 
 ## 0.1.5 (2025-07-23)
