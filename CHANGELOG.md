@@ -1,3 +1,9 @@
+## Unreleased
+
+### Fix
+
+- release 0.2.2
+
 ## 0.2.1 (2025-08-07)
 
 ### Fix
