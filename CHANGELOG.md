@@ -1,3 +1,11 @@
+## 0.2.1 (2025-07-31)
+
+### Fix
+
+- **tracing**: Add `update_input` flag to control input tracking in traces
+- **tracing**: Fix bug where intermediate outputs overwrote original input in traces
+- **tracing**: Remove opinionated message filtering from trace decorator
+
 ## 0.2.0 (2025-07-23)
 
 ### Fix
