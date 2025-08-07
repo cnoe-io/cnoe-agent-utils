@@ -1,6 +1,6 @@
 [project]
 name = "cnoe-agent-utils"
-version = "0.2.1"
+version = "0.2.2"
 description = "Core utilities for CNOE agents including LLM factory and tracing"
 authors = [
     {name = "CNOE Contributors"}
@@ -31,7 +31,7 @@ dependencies = [
 # Development dependencies
 dev = [
     "pytest>=8.0.0",
-    "pytest-asyncio>=0.21.0", 
+    "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
