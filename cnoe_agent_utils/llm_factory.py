@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import os
 from typing import Any, Iterable, Optional, Dict
 import dotenv
@@ -388,6 +389,7 @@ class LLMFactory:
     api_key = os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("OPENAI_ENDPOINT", "https://api.openai.com/v1")
     model_name = os.getenv("OPENAI_MODEL_NAME")
+    user = os.getenv("OPENAI_USER")
 
     missing_vars = []
     if not api_key:
@@ -418,6 +420,9 @@ class LLMFactory:
     model_kwargs: Dict[str, Any] = {"response_format": response_format} if response_format else {}
     if verbosity:
         model_kwargs["verbosity"] = verbosity
+    if user:
+        model_kwargs["user"] = user
+
     extra_body: Dict[str, Any] = {}
     if use_responses and (reasoning_effort or reasoning_summary):
         extra_body["reasoning"] = {
@@ -425,7 +430,7 @@ class LLMFactory:
             **({"summary": reasoning_summary} if reasoning_summary else {}),
         }
 
-        # Build kwargs for ChatOpenAI
+    # Build kwargs for ChatOpenAI
     openai_kwargs = {
         "model_name": model_name,
         "api_key": api_key,
@@ -449,10 +454,20 @@ class LLMFactory:
         # For non-GPT-5 models, set temperature normally
         openai_kwargs["temperature"] = temperature if temperature is not None else 0
 
+    # Add headers support from the other branch
+    openai_headers = os.getenv("OPENAI_DEFAULT_HEADERS")
+    if openai_headers:
+        try:
+            headers = json.loads(openai_headers)
+            openai_kwargs["default_headers"] = headers
+        except Exception as e:
+            logging.warning(f"[LLM] Could not parse OPENAI_HEADERS env var from JSON: {e}")
+
     # Don't pass output_version to avoid conflicts with underlying OpenAI client
     # LangChain handles this internally
 
     return ChatOpenAI(
+        default_headers=openai_headers,
         **openai_kwargs,
         **kwargs,
     )

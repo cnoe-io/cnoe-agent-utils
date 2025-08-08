@@ -195,6 +195,13 @@ export OPENAI_ENDPOINT=https://api.openai.com/v1
 export OPENAI_MODEL_NAME=gpt-4.1
 ```
 
+Optional configuration:
+
+```bash
+export OPENAI_DEFAULT_HEADERS='{"my-header-key":"my-value"}'
+export OPENAI_USER=user-identifier
+```
+
 Run the example:
 
 ```bash
