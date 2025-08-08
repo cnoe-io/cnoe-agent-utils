@@ -254,6 +254,7 @@ class LLMFactory:
     api_key = os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("OPENAI_ENDPOINT", "https://api.openai.com/v1")
     model_name = os.getenv("OPENAI_MODEL_NAME")
+    user = os.getenv("OPENAI_USER")
 
     missing_vars = []
     if not api_key:
@@ -270,12 +271,22 @@ class LLMFactory:
     logging.info(f"[LLM] OpenAI model={model_name} endpoint={base_url}")
 
     model_kwargs = {"response_format": response_format} if response_format else {}
+    if user:
+      model_kwargs["user"] = user
+    openai_headers = os.getenv("OPENAI_DEFAULT_HEADERS")
+    headers = None
+    if openai_headers:
+      try:
+        headers = json.loads(openai_headers)
+      except Exception as e:
+        logging.warning(f"[LLM] Could not parse OPENAI_HEADERS env var from JSON: {e}")
     return ChatOpenAI(
       model_name=model_name,
       api_key=api_key,
       base_url=base_url,
       temperature=temperature if temperature is not None else 0,
       model_kwargs=model_kwargs,
+      default_headers=headers,
       **kwargs,
     )
 
