@@ -13,11 +13,42 @@ import dotenv
 for logger_name in ['numexpr.utils', 'opentelemetry', 'openinference']:
     logging.getLogger(logger_name).setLevel(logging.ERROR)
 
-from langchain_aws import ChatBedrock
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_google_vertexai import ChatVertexAI
-from langchain_openai import AzureChatOpenAI, ChatOpenAI
+# Conditional imports for optional dependencies
+try:
+    from langchain_aws import ChatBedrock
+    _LANGCHAIN_AWS_AVAILABLE = True
+except ImportError:
+    _LANGCHAIN_AWS_AVAILABLE = False
+    ChatBedrock = None
+
+try:
+    from langchain_anthropic import ChatAnthropic
+    _LANGCHAIN_ANTHROPIC_AVAILABLE = True
+except ImportError:
+    _LANGCHAIN_ANTHROPIC_AVAILABLE = False
+    ChatAnthropic = None
+
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    _LANGCHAIN_GOOGLE_GENAI_AVAILABLE = True
+except ImportError:
+    _LANGCHAIN_GOOGLE_GENAI_AVAILABLE = False
+    ChatGoogleGenerativeAI = None
+
+try:
+    from langchain_google_vertexai import ChatVertexAI
+    _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE = True
+except ImportError:
+    _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE = False
+    ChatVertexAI = None
+
+try:
+    from langchain_openai import AzureChatOpenAI, ChatOpenAI
+    _LANGCHAIN_OPENAI_AVAILABLE = True
+except ImportError:
+    _LANGCHAIN_OPENAI_AVAILABLE = False
+    AzureChatOpenAI = None
+    ChatOpenAI = None
 import subprocess
 import json
 
@@ -61,15 +92,56 @@ class LLMFactory:
       not set (e.g., API keys, deployment names, etc.).
   """
 
-  SUPPORTED_PROVIDERS = {
-    "anthropic-claude",
-    "aws-bedrock",
-    "azure-openai",
-    "google-gemini",
-    "gcp-vertexai",
-    "openai",
-    "mistral"
-  }
+  @classmethod
+  def get_supported_providers(cls) -> set[str]:
+    """Get the list of supported providers based on available dependencies."""
+    providers = set()  # Start with empty set
+
+    if _LANGCHAIN_ANTHROPIC_AVAILABLE:
+        providers.add("anthropic-claude")
+
+    if _LANGCHAIN_AWS_AVAILABLE:
+        providers.add("aws-bedrock")
+
+    if _LANGCHAIN_OPENAI_AVAILABLE:
+        providers.add("azure-openai")
+        providers.add("openai")
+
+    if _LANGCHAIN_GOOGLE_GENAI_AVAILABLE:
+        providers.add("google-gemini")
+
+    if _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE:
+        providers.add("gcp-vertexai")
+
+    return providers
+
+  @classmethod
+  def is_provider_available(cls, provider: str) -> bool:
+    """Check if a specific provider is available."""
+    return provider in cls.get_supported_providers()
+
+  @classmethod
+  def get_missing_dependencies(cls, provider: str) -> list[str]:
+    """Get the missing dependencies for a specific provider."""
+    if provider == "anthropic-claude" and not _LANGCHAIN_ANTHROPIC_AVAILABLE:
+        return ["langchain-anthropic"]
+    elif provider == "aws-bedrock" and not _LANGCHAIN_AWS_AVAILABLE:
+        return ["langchain-aws", "boto3"]
+    elif provider == "openai" and not _LANGCHAIN_OPENAI_AVAILABLE:
+        return ["langchain-openai"]
+    elif provider == "azure-openai" and not _LANGCHAIN_OPENAI_AVAILABLE:
+        return ["langchain-openai"]
+    elif provider == "google-gemini" and not _LANGCHAIN_GOOGLE_GENAI_AVAILABLE:
+        return ["langchain-google-genai"]
+    elif provider == "gcp-vertexai" and not _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE:
+        return ["langchain-google-vertexai"]
+    else:
+        return []
+
+  @property
+  def SUPPORTED_PROVIDERS(self) -> set[str]:
+    """Get supported providers (property for backward compatibility)."""
+    return self.get_supported_providers()
 
   # ------------------------------------------------------------------ #
   # Construction helpers
@@ -80,13 +152,17 @@ class LLMFactory:
     if provider is None:
       provider = os.getenv("LLM_PROVIDER")
       if provider is None:
+        available_providers = self.get_supported_providers()
         raise ValueError(
-          "Provider must be specified as one of: azure-openai, openai, anthropic-claude, "
+          f"Provider must be specified as one of: {available_providers}, "
           "or set the LLM_PROVIDER environment variable"
         )
     if provider not in self.SUPPORTED_PROVIDERS:
+      available_providers = self.get_supported_providers()
       raise ValueError(
-        f"Unsupported provider: {provider}. Supported providers are: {self.SUPPORTED_PROVIDERS}"
+        f"Unsupported provider: {provider}. "
+        f"Available providers are: {available_providers}. "
+        f"Install missing dependencies with: pip install 'cnoe-agent-utils[aws]' or 'cnoe-agent-utils[gcp]' etc."
       )
     self.provider = provider.lower().replace("-", "_")
 
@@ -123,6 +199,11 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
+    if not _LANGCHAIN_AWS_AVAILABLE:
+      raise ImportError(
+        "AWS Bedrock support requires langchain-aws. "
+        "Install with: pip install 'cnoe-agent-utils[aws]'"
+      )
     aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
     credentials_profile = None
@@ -195,6 +276,11 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
+    if not _LANGCHAIN_ANTHROPIC_AVAILABLE:
+      raise ImportError(
+        "Anthropic Claude support requires langchain-anthropic. "
+        "Install with: pip install 'cnoe-agent-utils[anthropic]'"
+      )
     api_key = os.getenv("ANTHROPIC_API_KEY")
     model_name = os.getenv("ANTHROPIC_MODEL_NAME")
 
@@ -221,6 +307,11 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
+    if not _LANGCHAIN_OPENAI_AVAILABLE:
+      raise ImportError(
+        "Azure OpenAI support requires langchain-openai. "
+        "Install with: pip install 'cnoe-agent-utils[azure]'"
+      )
     deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
     api_version = os.getenv("AZURE_OPENAI_API_VERSION")
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -292,6 +383,11 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
+    if not _LANGCHAIN_OPENAI_AVAILABLE:
+      raise ImportError(
+        "OpenAI (openai.com) support requires langchain-openai. "
+        "Install with: pip install 'cnoe-agent-utils[openai]'"
+      )
     api_key = os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("OPENAI_ENDPOINT", "https://api.openai.com/v1")
     model_name = os.getenv("OPENAI_MODEL_NAME")
@@ -339,9 +435,13 @@ class LLMFactory:
         "base_url": base_url,
         "use_responses_api": use_responses,
         "streaming": streaming,
-        "model_kwargs": model_kwargs or None,
-        "extra_body": extra_body or None,
     }
+
+    # Only add model_kwargs and extra_body if they have content
+    if model_kwargs:
+        openai_kwargs["model_kwargs"] = model_kwargs
+    if extra_body:
+        openai_kwargs["extra_body"] = extra_body
 
     # Only set temperature when supported (GPT-5 doesn't support temperature=0.0)
     if (model_name or "").lower().startswith("gpt-5"):
@@ -366,6 +466,11 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
+    if not _LANGCHAIN_GOOGLE_GENAI_AVAILABLE:
+      raise ImportError(
+        "Google Gemini support requires langchain-google-genai. "
+        "Install with: pip install 'cnoe-agent-utils[gcp]'"
+      )
 
     api_key = os.getenv("GOOGLE_API_KEY")
     model_name = os.getenv("GOOGLE_GEMINI_MODEL_NAME", "gemini-2.0-flash")
@@ -392,6 +497,11 @@ class LLMFactory:
     temperature: float | None,
     **kwargs,
   ):
+    if not _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE:
+      raise ImportError(
+        "Google Vertex AI support requires langchain-google-vertexai. "
+        "Install with: pip install 'cnoe-agent-utils[gcp]'"
+      )
     import google.auth
 
     # Check for credentials
@@ -410,11 +520,20 @@ class LLMFactory:
     if not model_name:
       raise EnvironmentError("VERTEXAI_MODEL_NAME environment variable is required")
 
-    logging.info(f"[LLM] Google VertexAI model={model_name}")
+    # Get project and location from environment variables
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+
+    if not project_id:
+      raise EnvironmentError("GOOGLE_CLOUD_PROJECT environment variable is required for Vertex AI")
+
+    logging.info(f"[LLM] Google VertexAI model={model_name} project={project_id} location={location}")
 
     model_kwargs = {"response_format": response_format} if response_format else {}
     return ChatVertexAI(
       model=model_name,
+      project=project_id,
+      location=location,
       credentials=credentials,
       temperature=temperature if temperature is not None else 0,
       max_tokens=None,

@@ -1,0 +1,81 @@
+name: Test Examples
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type to run'
+        required: true
+        default: 'examples'
+        type: choice
+        options:
+        - examples
+
+jobs:
+  test-examples:
+    name: Run examples
+    runs-on: ubuntu-latest
+    env:
+      # OpenAI
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL_NAME: ${{ secrets.OPENAI_MODEL_NAME }}
+
+      # Azure OpenAI
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+      AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+
+      # Anthropic
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # Google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+      # AWS
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_BEDROCK_MODEL_NAME: ${{ secrets.AWS_BEDROCK_MODEL_NAME }}
+
+      # Configuration
+      LLM_SHOW_TIMING: ${{ secrets.LLM_SHOW_TIMING }}
+      ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
+      LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: latest
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .venv
+          .uv
+        key: ${{ runner.os }}-3.13-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-3.13-
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Run example tests
+      run: |
+        source .venv/bin/activate
+        python scripts/test_examples.py

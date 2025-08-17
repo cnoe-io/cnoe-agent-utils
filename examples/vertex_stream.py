@@ -1,5 +1,7 @@
 
 import os, sys
+import dotenv
+dotenv.load_dotenv()
 from cnoe_agent_utils.llm_factory import LLMFactory
 from cnoe_agent_utils.utils import stream_with_spinner
 

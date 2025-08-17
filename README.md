@@ -56,17 +56,62 @@ pip install uv
 
 ### 📦 Installation
 
+#### Installation Options
+
+**Default Installation (recommended for most users):**
+
 ```bash
 pip install cnoe-agent-utils
 ```
+This installs all dependencies and provides full functionality. It's equivalent to `pip install 'cnoe-agent-utils[all]'`.
 
-Or, if you are developing locally:
+**Minimal Installation (specific functionality only):**
+Use these when you only need specific functionality or want to minimize package size:
+
+```bash
+# Anthropic Claude support only
+pip install "cnoe-agent-utils[anthropic]"
+
+# OpenAI support (openai.com GPT models) only
+pip install "cnoe-agent-utils[openai]"
+
+# Azure OpenAI support (Azure-hosted GPT models) only
+pip install "cnoe-agent-utils[azure]"
+
+# AWS support (Bedrock, etc.) only
+pip install "cnoe-agent-utils[aws]"
+
+# Google Cloud support (Vertex AI, Gemini) only
+pip install "cnoe-agent-utils[gcp]"
+
+# Advanced tracing and observability (Langfuse, OpenTelemetry) only
+pip install "cnoe-agent-utils[tracing]"
+
+# Development dependencies (testing, linting, etc.)
+pip install "cnoe-agent-utils[dev]"
+```
+
+#### Using uv
+```bash
+# Default installation (all dependencies)
+uv add cnoe-agent-utils
+
+# Minimal installation (specific functionality only)
+uv add "cnoe-agent-utils[anthropic]"
+uv add "cnoe-agent-utils[openai]"
+uv add "cnoe-agent-utils[azure]"
+uv add "cnoe-agent-utils[aws]"
+uv add "cnoe-agent-utils[gcp]"
+uv add "cnoe-agent-utils[tracing]"
+```
+
+#### Local Development
+If you are developing locally:
 
 ```bash
 git clone https://github.com/cnoe-agent-utils/cnoe-agent-utils.git
 cd cnoe-agent-utils
-poetry build
-poetry install
+uv sync
 ```
 
 ---

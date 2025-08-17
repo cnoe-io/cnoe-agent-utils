@@ -1,4 +1,6 @@
 import os, sys
+import dotenv
+dotenv.load_dotenv()
 from cnoe_agent_utils.llm_factory import LLMFactory
 from cnoe_agent_utils.utils import stream_with_spinner
 
@@ -6,7 +8,7 @@ def main():
     llm = LLMFactory("aws-bedrock").get_llm()
     print("=== AWS Bedrock (stream) ===")
     # Stream with spinner
-    for chunk in stream_with_spinner(llm, "Write one big paragraph about river deltas.", "Waiting for AWS Bedrock response"):
+    for chunk in stream_with_spinner(llm, "Write a short sentence about river deltas.", "Waiting for AWS Bedrock response"):
         text = getattr(chunk, "text", None)
         if callable(text):
             text = text()

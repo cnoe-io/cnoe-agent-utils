@@ -6,7 +6,7 @@ from cnoe_agent_utils.utils import stream_with_spinner
 
 def main():
     llm = LLMFactory("azure-openai").get_llm()
-    prompt = "Write long paragraph about the Moon's surface."
+    prompt = "Write one short sentence about the Moon's surface."
     print("=== Azure OpenAI (stream) ===")
 
     # Stream with spinner
