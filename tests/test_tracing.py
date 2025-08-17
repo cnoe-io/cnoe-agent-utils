@@ -3,8 +3,7 @@
 
 import os
 import pytest
-from unittest.mock import Mock, patch, MagicMock, call
-from contextvars import ContextVar
+from unittest.mock import patch
 
 from cnoe_agent_utils.tracing import (
     TracingManager,

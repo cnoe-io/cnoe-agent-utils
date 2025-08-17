@@ -2,7 +2,6 @@ import sys
 import time
 import threading
 import os
-from typing import Optional
 from datetime import datetime
 
 

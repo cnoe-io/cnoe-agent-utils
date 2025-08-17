@@ -4,7 +4,7 @@ Test script for the timing features in the utils module.
 """
 
 import os
-from cnoe_agent_utils.utils import Spinner, time_llm_operation
+from cnoe_agent_utils.utils import time_llm_operation
 
 def test_timing_features():
     """Test the timing features with different environment variable settings."""

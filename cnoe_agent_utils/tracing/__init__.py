@@ -9,7 +9,7 @@ Part of cnoe-agent-utils package alongside LLMFactory.
 
 Key features:
 - Eliminates conditional import duplication (langfuse)
-- Unified A2A framework disabling 
+- Unified A2A framework disabling
 - Stream tracing decorator to remove repetitive code
 - Graceful degradation when tracing dependencies unavailable
 - Multi-container deployment ready
@@ -45,7 +45,7 @@ disable_a2a_tracing()
 
 __all__ = [
     "TracingManager",
-    "disable_a2a_tracing", 
+    "disable_a2a_tracing",
     "is_a2a_disabled",
     "trace_agent_stream",
     "extract_trace_id_from_context",

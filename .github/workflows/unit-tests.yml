@@ -21,6 +21,33 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      # OpenAI
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL_NAME: ${{ secrets.OPENAI_MODEL_NAME }}
+
+      # Azure OpenAI
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+      AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+
+      # Anthropic
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # Google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+      # AWS
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_BEDROCK_MODEL_NAME: ${{ secrets.AWS_BEDROCK_MODEL_NAME }}
+
+      # Configuration
+      LLM_SHOW_TIMING: ${{ secrets.LLM_SHOW_TIMING }}
+      ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
+      LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
 
     steps:
     - name: Checkout code

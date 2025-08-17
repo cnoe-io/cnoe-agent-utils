@@ -124,7 +124,7 @@ def test_examples(env_file=None):
     env_vars = {}
     if env_file and Path(env_file).exists():
         print(f"Loading environment from {env_file}")
-        with open(env_file, 'r') as f:
+        with open(env_file, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
@@ -179,7 +179,7 @@ def test_examples(env_file=None):
 
     # Show detailed results
     if failed > 0:
-        print(f"\nFAILED EXAMPLES:")
+        print("\nFAILED EXAMPLES:")
         for example_path, success, stdout, stderr in results:
             if not success:
                 print(f"  ❌ {example_path.name}")

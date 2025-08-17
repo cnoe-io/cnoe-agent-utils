@@ -3,7 +3,7 @@
 
 import os
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 from cnoe_agent_utils.llm_factory import LLMFactory
 
 

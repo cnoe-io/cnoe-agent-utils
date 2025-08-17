@@ -3,9 +3,7 @@
 
 import pytest
 import os
-import sys
-from unittest.mock import patch, MagicMock
-from typing import List
+from unittest.mock import patch
 
 # Test the LLMFactory class
 from cnoe_agent_utils.llm_factory import LLMFactory

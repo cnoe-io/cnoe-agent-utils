@@ -4,8 +4,7 @@
 import os
 import time
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
+from unittest.mock import Mock, patch
 
 from cnoe_agent_utils.utils import (
     stream_with_spinner,
@@ -217,7 +216,7 @@ class TestTimeLLMOperation:
         with patch.dict(os.environ, {"LLM_SHOW_TIMING": "true"}):
             with patch('cnoe_agent_utils.utils.print') as mock_print:
                 with pytest.raises(ValueError):
-                    with time_llm_operation("Test operation") as timer:
+                    with time_llm_operation("Test operation"):
                         raise ValueError("Test error")
 
                 # Should still print timing information

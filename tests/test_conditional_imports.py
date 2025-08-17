@@ -2,7 +2,7 @@
 """Test script to verify conditional imports work correctly."""
 
 import sys
-import os
+import pytest
 
 # Temporarily remove langchain packages from sys.path to test conditional imports
 original_path = sys.path.copy()
@@ -80,7 +80,7 @@ def run_conditional_imports_check():
     for provider in providers:
         try:
             print(f"\nTesting provider: {provider}")
-            factory = LLMFactory(provider)
+            LLMFactory(provider)
             print(f"  ✅ Successfully created factory for {provider}")
         except Exception as e:
             print(f"  ❌ Failed to create factory for {provider}: {e}")

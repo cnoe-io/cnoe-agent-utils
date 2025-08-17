@@ -2,11 +2,9 @@
 """Tests for package dependency installation and optional dependency groups."""
 
 import pytest
-import subprocess
 import sys
-import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 class TestPackageDependencies:

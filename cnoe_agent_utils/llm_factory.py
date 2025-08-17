@@ -49,8 +49,6 @@ except ImportError:
     _LANGCHAIN_OPENAI_AVAILABLE = False
     AzureChatOpenAI = None
     ChatOpenAI = None
-import subprocess
-import json
 
 logging.basicConfig(
   level=logging.INFO,
@@ -221,7 +219,6 @@ class LLMFactory:
     if aws_debug:
       import boto3
       try:
-        session_kwargs = {}
         if aws_access_key_id and aws_secret_access_key:
           session = boto3.Session(
             aws_access_key_id=aws_access_key_id,
@@ -343,7 +340,7 @@ class LLMFactory:
     reasoning_effort  = os.getenv("AZURE_OPENAI_REASONING_EFFORT")   # low|medium|high
     reasoning_summary = os.getenv("AZURE_OPENAI_REASONING_SUMMARY")  # auto|concise|detailed
     verbosity         = os.getenv("AZURE_OPENAI_VERBOSITY")          # low|medium|high
-    output_version    = os.getenv("AZURE_OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
+    os.getenv("AZURE_OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
 
     streaming = _as_bool(os.getenv("AZURE_OPENAI_STREAMING",
                                   os.getenv("LLM_STREAMING","true")), True)
@@ -413,7 +410,7 @@ class LLMFactory:
     reasoning_effort  = os.getenv("OPENAI_REASONING_EFFORT")   # low|medium|high
     reasoning_summary = os.getenv("OPENAI_REASONING_SUMMARY")  # auto|concise|detailed
     verbosity         = os.getenv("OPENAI_VERBOSITY")          # low|medium|high
-    output_version    = os.getenv("OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
+    os.getenv("OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
 
     streaming = _as_bool(os.getenv("OPENAI_STREAMING",
                                   os.getenv("LLM_STREAMING","true")), True)
@@ -505,10 +502,10 @@ class LLMFactory:
     import google.auth
 
     # Check for credentials
-    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     try:
       credentials, _ = google.auth.default()
-      logging.info(f"[LLM] Google VertexAI credentials loaded successfully")
+      logging.info("[LLM] Google VertexAI credentials loaded successfully")
     except Exception as e:
       raise EnvironmentError(
         "Could not load Google Cloud credentials. "
