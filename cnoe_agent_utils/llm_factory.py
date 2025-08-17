@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional, Dict
 import dotenv
 
 # Suppress specific unwanted logs before imports
@@ -26,6 +26,19 @@ logging.basicConfig(
   format="%(asctime)s %(levelname)s [llm_factory] %(message)s",
   datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+_TRUE = {"1","true","t","yes","y","on"}
+_FALSE = {"0","false","f","no","n","off"}
+
+def _as_bool(v: Optional[str], default: bool=False) -> bool:
+    if v is None:
+        return default
+    vv = v.strip().lower()
+    if vv in _TRUE:
+        return True
+    if vv in _FALSE:
+        return False
+    return default
 
 class LLMFactory:
   """Factory that returns a *ready‑to‑use* LangChain chat model.
@@ -231,19 +244,47 @@ class LLMFactory:
       f"[LLM] AzureOpenAI deployment={deployment} api_version={api_version}"
     )
 
-    model_kwargs = {"response_format": response_format} if response_format else {}
+
+    # --- GPT-5 support: Responses API + reasoning + streaming ---
+    use_responses = _as_bool(os.getenv("AZURE_OPENAI_USE_RESPONSES"),
+                            (deployment or "").lower().startswith("gpt-5"))
+
+    reasoning_effort  = os.getenv("AZURE_OPENAI_REASONING_EFFORT")   # low|medium|high
+    reasoning_summary = os.getenv("AZURE_OPENAI_REASONING_SUMMARY")  # auto|concise|detailed
+    verbosity         = os.getenv("AZURE_OPENAI_VERBOSITY")          # low|medium|high
+    output_version    = os.getenv("AZURE_OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
+
+    streaming = _as_bool(os.getenv("AZURE_OPENAI_STREAMING",
+                                  os.getenv("LLM_STREAMING","true")), True)
+
+    model_kwargs: Dict[str, Any] = {"response_format": response_format} if response_format else {}
+    if verbosity:
+        model_kwargs["verbosity"] = verbosity
+    extra_body: Dict[str, Any] = {}
+    if use_responses and (reasoning_effort or reasoning_summary):
+        extra_body["reasoning"] = {
+            **({"effort": reasoning_effort} if reasoning_effort else {}),
+            **({"summary": reasoning_summary} if reasoning_summary else {}),
+        }
+
+    # For GPT-5 models, don't set temperature if it's 0.0 (use default)
+    kwargs_to_pass = {}
+    if temperature is not None and temperature != 0.0:
+        kwargs_to_pass["temperature"] = temperature
+    elif not (deployment or "").lower().startswith("gpt-5"):
+        # For non-GPT-5 models, set temperature to 0 if not specified
+        kwargs_to_pass["temperature"] = 0
+
     return AzureChatOpenAI(
-      azure_endpoint=endpoint,
-      azure_deployment=deployment,
-      openai_api_key=api_key,
-      api_version=api_version,
-      temperature=temperature if temperature is not None else 0,
-      max_tokens=None,
-      timeout=None,
-      max_retries=5,
-      model_kwargs=model_kwargs,
-      **kwargs,
-    )
+        azure_endpoint=endpoint,
+        azure_deployment=deployment,
+        model=deployment,  # Add model parameter for newer LangChain versions
+        api_key=api_key,
+        api_version=api_version,
+        streaming=streaming,
+        **kwargs_to_pass,
+        **kwargs,
+      )
 
   def _build_openai_llm(
     self,
@@ -269,16 +310,55 @@ class LLMFactory:
 
     logging.info(f"[LLM] OpenAI model={model_name} endpoint={base_url}")
 
-    model_kwargs = {"response_format": response_format} if response_format else {}
-    return ChatOpenAI(
-      model_name=model_name,
-      api_key=api_key,
-      base_url=base_url,
-      temperature=temperature if temperature is not None else 0,
-      model_kwargs=model_kwargs,
-      **kwargs,
-    )
+    # --- GPT-5 support: Responses API + reasoning + streaming ---
+    use_responses = _as_bool(os.getenv("OPENAI_USE_RESPONSES"),
+                            (model_name or "").lower().startswith("gpt-5"))
 
+    reasoning_effort  = os.getenv("OPENAI_REASONING_EFFORT")   # low|medium|high
+    reasoning_summary = os.getenv("OPENAI_REASONING_SUMMARY")  # auto|concise|detailed
+    verbosity         = os.getenv("OPENAI_VERBOSITY")          # low|medium|high
+    output_version    = os.getenv("OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
+
+    streaming = _as_bool(os.getenv("OPENAI_STREAMING",
+                                  os.getenv("LLM_STREAMING","true")), True)
+
+    model_kwargs: Dict[str, Any] = {"response_format": response_format} if response_format else {}
+    if verbosity:
+        model_kwargs["verbosity"] = verbosity
+    extra_body: Dict[str, Any] = {}
+    if use_responses and (reasoning_effort or reasoning_summary):
+        extra_body["reasoning"] = {
+            **({"effort": reasoning_effort} if reasoning_effort else {}),
+            **({"summary": reasoning_summary} if reasoning_summary else {}),
+        }
+
+        # Build kwargs for ChatOpenAI
+    openai_kwargs = {
+        "model_name": model_name,
+        "api_key": api_key,
+        "base_url": base_url,
+        "use_responses_api": use_responses,
+        "streaming": streaming,
+        "model_kwargs": model_kwargs or None,
+        "extra_body": extra_body or None,
+    }
+
+    # Only set temperature when supported (GPT-5 doesn't support temperature=0.0)
+    if (model_name or "").lower().startswith("gpt-5"):
+        # For GPT-5 models, don't set temperature if it's 0.0 (use default)
+        if temperature is not None and temperature != 0.0:
+            openai_kwargs["temperature"] = temperature
+    else:
+        # For non-GPT-5 models, set temperature normally
+        openai_kwargs["temperature"] = temperature if temperature is not None else 0
+
+    # Don't pass output_version to avoid conflicts with underlying OpenAI client
+    # LangChain handles this internally
+
+    return ChatOpenAI(
+        **openai_kwargs,
+        **kwargs,
+    )
 
   def _build_google_gemini_llm(
     self,

@@ -46,8 +46,8 @@ def main():
 
   # Check for either AWS_BEDROCK_PROFILE or AWS_PROFILE
   # Check for AWS_PROFILE
-  if not os.getenv("AWS_PROFILE"):
-    missing.append("AWS_PROFILE")
+  # if not os.getenv("AWS_PROFILE"):
+  #   missing.append("AWS_PROFILE")
 
   # Check for AWS_BEDROCK_MODEL_ID
   if not os.getenv("AWS_BEDROCK_MODEL_ID"):

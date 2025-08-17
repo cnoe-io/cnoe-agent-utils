@@ -101,6 +101,52 @@ test: test-venv
 	@echo "======================================="
 	. .venv/bin/activate && pytest tests
 
+test-examples: test-venv
+	@echo "======================================="
+	@echo " Running all example scripts           "
+	@echo "======================================="
+	@echo "Sourcing .env and running examples..."
+	@if [ -f $(PWD)/.env ]; then \
+		set -a; \
+		. $(PWD)/.env; \
+		set +a; \
+	fi; \
+	total=0; \
+	passed=0; \
+	failed=0; \
+	for f in tests/examples/*.py; do \
+		if [ -f "$$f" ]; then \
+			echo "Running $$f..."; \
+			total=$$((total + 1)); \
+			if . .venv/bin/activate && python "$$f" >/dev/null 2>&1; then \
+				echo "✅ $$f passed"; \
+				passed=$$((passed + 1)); \
+			else \
+				echo "❌ $$f failed"; \
+				failed=$$((failed + 1)); \
+			fi; \
+		fi; \
+	done; \
+	echo "======================================="; \
+	echo " Test Results Summary:"; \
+	echo " Total examples: $$total"; \
+	echo " ✅ Passed: $$passed"; \
+	echo " ❌ Failed: $$failed"; \
+	echo "======================================="
+
+test-all: test-venv
+	@echo "======================================="
+	@echo " Running all tests (unit, integration, examples)"
+	@echo "======================================="
+	@echo "Running unit tests..."
+	. .venv/bin/activate && pytest tests/unit/ -v
+	@echo "======================================="
+	@echo "Running integration tests..."
+	. .venv/bin/activate && pytest tests/integration/ -v
+	@echo "======================================="
+	@echo "Running example tests..."
+	$(MAKE) test-examples
+
 ## ========== Release & Versioning ==========
 release: setup-venv  ## Bump version and create a release
 	@. .venv/bin/activate; poetry install
@@ -123,4 +169,6 @@ help:
 	@echo "  cz-changelog                   Generate changelog using commitizen"
 	@echo "  test                           Run tests using pytest"
 	@echo "  test-venv                      Set up test virtual environment and install test dependencies"
+	@echo "  test-examples                  Run all example scripts and show test results"
+	@echo "  test-all                       Run all tests (unit, integration, examples)"
 	@echo "  help                           Show this help message"
