@@ -47,6 +47,8 @@ jobs:
       ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
       LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
 
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
