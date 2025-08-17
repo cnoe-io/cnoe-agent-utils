@@ -4,16 +4,10 @@ This directory contains all tests and examples for the `cnoe-agent-utils` librar
 
 ## Directory Organization
 
-### `tests/unit/`
-Contains unit tests that test individual components in isolation:
-- `test_*.py` - Unit tests for specific LLM providers
-- Fast, focused tests that don't require external API calls
-
-### `tests/integration/`
-Contains integration tests that test the full workflow:
-- `test_*.py` - Integration tests for complete LLM workflows
-- May require API keys and external services
-- Tests the interaction between components
+### `tests/` (Main Directory)
+Contains all test files following the `test_*` pattern:
+- `test_*.py` - Pytest test files for different LLM providers and functionality
+- Fast, focused tests that may or may not require external API calls
 
 ### `tests/examples/`
 Contains example scripts that demonstrate library usage:
@@ -31,14 +25,14 @@ make test-all
 
 ### Run Specific Test Types
 ```bash
-# Unit tests only
+# All pytest tests
 make test
 
 # Examples only
-make test-examples
+make examples
 
-# Integration tests only
-pytest tests/integration/ -v
+# All tests and examples
+make test-all
 ```
 
 ### Run Individual Tests
@@ -50,7 +44,7 @@ source .venv/bin/activate
 python tests/examples/azure_openai_stream_gpt5.py
 
 # Run with pytest
-pytest tests/unit/test_openai_gpt5.py -v
+pytest tests/test_openai_gpt5.py -v
 ```
 
 ## Environment Setup
@@ -77,17 +71,11 @@ Most tests require environment variables to be set. You can:
 
 ## Test Categories
 
-### Unit Tests (`tests/unit/`)
-- Fast execution
-- No external dependencies
-- Test individual functions and classes
-- Run with: `pytest tests/unit/`
-
-### Integration Tests (`tests/integration/`)
-- Medium execution time
-- May require API keys
-- Test complete workflows
-- Run with: `pytest tests/integration/`
+### Pytest Tests (`tests/`)
+- Fast execution for most tests
+- May or may not require external dependencies
+- Test individual functions, classes, and workflows
+- Run with: `make test` or `pytest tests/`
 
 ### Example Tests (`tests/examples/`)
 - Variable execution time
@@ -97,16 +85,10 @@ Most tests require environment variables to be set. You can:
 
 ## Adding New Tests
 
-### New Unit Test
+### New Pytest Test
 ```bash
-# Create in tests/unit/
-touch tests/unit/test_new_feature.py
-```
-
-### New Integration Test
-```bash
-# Create in tests/integration/
-touch tests/integration/test_new_workflow.py
+# Create in tests/
+touch tests/test_new_feature.py
 ```
 
 ### New Example

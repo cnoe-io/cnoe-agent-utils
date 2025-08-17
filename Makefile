@@ -99,9 +99,9 @@ test: test-venv
 	@echo "======================================="
 	@echo " Running pytest on tests directory     "
 	@echo "======================================="
-	. .venv/bin/activate && pytest tests
+	. .venv/bin/activate && pytest tests -v
 
-test-examples: test-venv
+examples: test-venv
 	@echo "======================================="
 	@echo " Running all example scripts           "
 	@echo "======================================="
@@ -114,15 +114,17 @@ test-examples: test-venv
 	total=0; \
 	passed=0; \
 	failed=0; \
-	for f in tests/examples/*.py; do \
+	for f in examples/*.py; do \
 		if [ -f "$$f" ]; then \
 			echo "Running $$f..."; \
 			total=$$((total + 1)); \
-			if . .venv/bin/activate && python "$$f" >/dev/null 2>&1; then \
+			. .venv/bin/activate && python "$$f"; \
+			status=$$?; \
+			if [ $$status -eq 0 ]; then \
 				echo "✅ $$f passed"; \
 				passed=$$((passed + 1)); \
 			else \
-				echo "❌ $$f failed"; \
+				echo "❌ $$f failed (exit code $$status)"; \
 				failed=$$((failed + 1)); \
 			fi; \
 		fi; \
@@ -136,16 +138,13 @@ test-examples: test-venv
 
 test-all: test-venv
 	@echo "======================================="
-	@echo " Running all tests (unit, integration, examples)"
+	@echo " Running all tests and examples"
 	@echo "======================================="
-	@echo "Running unit tests..."
-	. .venv/bin/activate && pytest tests/unit/ -v
-	@echo "======================================="
-	@echo "Running integration tests..."
-	. .venv/bin/activate && pytest tests/integration/ -v
+	@echo "Running pytest tests..."
+	. .venv/bin/activate && pytest tests/ -v
 	@echo "======================================="
 	@echo "Running example tests..."
-	$(MAKE) test-examples
+	$(MAKE) examples
 
 ## ========== Release & Versioning ==========
 release: setup-venv  ## Bump version and create a release
