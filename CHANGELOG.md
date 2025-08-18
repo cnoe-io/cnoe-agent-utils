@@ -1,3 +1,13 @@
+## Unreleased
+
+### Feat
+
+- add gpt-5 and streaming support
+
+### Refactor
+
+- add unit tests and examples
+
 ## 0.2.2 (2025-08-07)
 
 ### Fix
