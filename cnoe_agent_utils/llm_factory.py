@@ -461,7 +461,7 @@ class LLMFactory:
             headers = json.loads(openai_headers)
             openai_kwargs["default_headers"] = headers
         except Exception as e:
-            logging.warning(f"[LLM] Could not parse OPENAI_HEADERS env var from JSON: {e}")
+            logging.warning(f"[LLM] Could not parse OPENAI_DEFAULT_HEADERS env var from JSON: {e}")
 
     # Don't pass output_version to avoid conflicts with underlying OpenAI client
     # LangChain handles this internally
