@@ -1,8 +1,10 @@
 # 🤖 cnoe-agent-utils
 
 [![PyPI version](https://img.shields.io/pypi/v/cnoe-agent-utils.svg)](https://pypi.org/project/cnoe-agent-utils/)
+[![Unit Tests](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
+[![Test Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml)
 [![Publish Python Package](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml)
-[![commit-msg](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/conventional_commits.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/conventional_commits.yml)
+
 
 * **Reusable utilities and abstractions** for building agent-based (LLM-powered) systems.
 * **Centralized LLM Factory** supporting major providers (AWS, Azure, GCP, OpenAI, Gemini, Anthropic).
