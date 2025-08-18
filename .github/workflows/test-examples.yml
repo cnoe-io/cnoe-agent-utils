@@ -84,7 +84,7 @@ jobs:
         uv sync --dev
 
     # - name: Test Anthropic
-    #   if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'anthropic'
+    #   if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'anthropic' || github.event_name != 'workflow_dispatch'
     #   run: |
     #     source .venv/bin/activate
     #     if [ -n "$ANTHROPIC_API_KEY" ]; then
@@ -96,7 +96,7 @@ jobs:
     #   continue-on-error: true
 
     - name: Test AWS Bedrock
-      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'aws-bedrock'
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'aws-bedrock' || github.event_name != 'workflow_dispatch'
       run: |
         source .venv/bin/activate
         if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
@@ -108,7 +108,7 @@ jobs:
       continue-on-error: true
 
     - name: Test Azure OpenAI Example
-      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'azure-openai'
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'azure-openai' || github.event_name != 'workflow_dispatch'
       run: |
         source .venv/bin/activate
         echo "🧪 Testing Azure OpenAI Example"
@@ -116,7 +116,7 @@ jobs:
       continue-on-error: true
 
     - name: Test OpenAI
-      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'openai'
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'openai' || github.event_name != 'workflow_dispatch'
       run: |
         source .venv/bin/activate
         echo "🧪 Testing OpenAI Example"
@@ -124,7 +124,7 @@ jobs:
       continue-on-error: true
 
     - name: Test Google Gemini
-      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'google-gemini'
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'google-gemini' || github.event_name != 'workflow_dispatch'
       run: |
         source .venv/bin/activate
         if [ -n "$GOOGLE_API_KEY" ]; then
@@ -136,7 +136,7 @@ jobs:
       continue-on-error: true
 
     - name: Test Google Vertex AI
-      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'gcp-vertex'
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'gcp-vertex' || github.event_name != 'workflow_dispatch'
       run: |
         source .venv/bin/activate
         if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
