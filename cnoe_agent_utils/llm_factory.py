@@ -9,10 +9,6 @@ import os
 from typing import Any, Iterable, Optional, Dict
 import dotenv
 
-# Suppress specific unwanted logs before imports
-# Only suppress log messages, keep OpenTelemetry functionality intact
-for logger_name in ['numexpr.utils', 'opentelemetry', 'openinference']:
-    logging.getLogger(logger_name).setLevel(logging.ERROR)
 
 # Conditional imports for optional dependencies
 try:

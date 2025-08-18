@@ -2,7 +2,6 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/cnoe-agent-utils.svg)](https://pypi.org/project/cnoe-agent-utils/)
 [![Unit Tests](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
-[![Test Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml)
 [![Publish Python Package](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml)
 [![Coverage Badge](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
 
