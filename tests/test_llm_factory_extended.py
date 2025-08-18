@@ -3,7 +3,7 @@
 
 import os
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from cnoe_agent_utils.llm_factory import LLMFactory
 
 
@@ -16,7 +16,7 @@ class TestLLMFactoryExtendedCoverage:
             "AWS_ACCESS_KEY_ID": "test-key",
             "AWS_SECRET_ACCESS_KEY": "test-secret",
             "AWS_REGION": "us-east-1",
-            "AWS_BEDROCK_MODEL_NAME": "anthropic.claude-3-sonnet-20240229-v1"
+            "AWS_BEDROCK_MODEL_ID": "anthropic.claude-3-sonnet-20240229-v1"
         }):
             factory = LLMFactory("aws-bedrock")
             llm = factory._build_aws_bedrock_llm(None, None)
@@ -58,14 +58,20 @@ class TestLLMFactoryExtendedCoverage:
         with patch.dict(os.environ, {
             "GOOGLE_CLOUD_PROJECT": "test-project",
             "GOOGLE_CLOUD_LOCATION": "us-central1",
-            "VERTEXAI_MODEL_NAME": "gemini-2.0-flash-001"
+            "VERTEXAI_MODEL_NAME": "gemini-2.0-flash-001",
+            "GOOGLE_APPLICATION_CREDENTIALS": "/tmp/mock-credentials.json"
         }):
-            factory = LLMFactory("gcp-vertexai")
-            llm = factory._build_gcp_vertexai_llm(None, None)
+            # Mock the google.auth.default call to avoid actual credential validation
+            with patch('google.auth.default') as mock_auth:
+                mock_credentials = MagicMock()
+                mock_auth.return_value = (mock_credentials, "test-project")
 
-            assert llm is not None
-            # Verify the LLM was created with correct parameters
-            assert hasattr(llm, 'model_name')
+                factory = LLMFactory("gcp-vertexai")
+                llm = factory._build_gcp_vertexai_llm(None, None)
+
+                assert llm is not None
+                # Verify the LLM was created with correct parameters
+                assert hasattr(llm, 'model_name')
 
     def test_get_llm_without_tools_success(self):
         """Test getting LLM without tools successfully."""
