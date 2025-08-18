@@ -94,21 +94,16 @@ jobs:
         name: coverage-report
         path: coverage.xml
 
-    - name: Generate and upload coverage badge JSON to Gist
+    - name: Generate coverage badge
       run: |
-        pip install coverage-badge jq
-        # Generate badge JSON from coverage.xml
-        coverage-badge -o coverage-badge.json -f -s coverage.xml
-        # Extract the JSON content (ensure it's valid JSON)
-        CONTENT=$(cat coverage-badge.json | jq -Rs .)
-        # Patch the Gist with the badge JSON
-        curl -X PATCH \
-          -H "Authorization: token ${{ secrets.GIST_TOKEN }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/gists/main \
-          -d "{\"files\": {\"coverage-badge.json\": {\"content\": $CONTENT}}}"
-      env:
-        GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        pip install 'genbadge[all]'
+        genbadge coverage -i coverage.xml -o coverage-badge.svg
+
+    - name: Upload coverage badge SVG as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-badge
+        path: coverage-badge.svg
 
     - name: Comment coverage summary on PR
       if: github.event_name == 'pull_request'
