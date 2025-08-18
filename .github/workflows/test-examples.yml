@@ -46,14 +46,16 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      AWS_BEDROCK_MODEL_NAME: ${{ secrets.AWS_BEDROCK_MODEL_NAME }}
+      AWS_BEDROCK_MODEL_ID: ${{ secrets.AWS_BEDROCK_MODEL_ID }}
 
       # Configuration
       LLM_SHOW_TIMING: ${{ secrets.LLM_SHOW_TIMING }}
       ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
       LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
 
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      GOOGLE_APPLICATION_CREDENTIALS_ENV: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_ENV }}
+      GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+      VERTEXAI_MODEL_NAME: ${{ secrets.VERTEXAI_MODEL_NAME }}
 
     steps:
     - name: Checkout code
