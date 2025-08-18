@@ -1,3 +1,37 @@
+## 0.3.0 (2025-08-17)
+
+### Feat
+
+- Add OpenAI config options
+- add gpt-5 and streaming support
+
+### Fix
+
+- update README.md
+- uv sync
+- updates
+- revert pyproject.toml to 0.2.2
+- use uv in .cz.toml
+- **pyproject.toml**: remove all package and update default dependency
+- updates
+- updates
+- updates
+- update new GHA tests
+- add coverage as comment
+- unit tests gha
+- update gcp creds for example run
+- unit tests
+- update GHA
+- update GHA
+- updates
+- lint
+- updates
+- 'LLMFactory' object has no attribute 'provider'
+
+### Refactor
+
+- add unit tests and examples
+
 ## 0.2.2 (2025-08-07)
 
 ### Fix
