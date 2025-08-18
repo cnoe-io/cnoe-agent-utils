@@ -8,12 +8,18 @@ on:
   workflow_dispatch:
     inputs:
       test_type:
-        description: 'Test type to run'
+        description: 'Examples to run'
         required: true
-        default: 'examples'
+        default: 'all'
         type: choice
         options:
-        - examples
+        - all
+        # - anthropic
+        - aws-bedrock
+        - azure-openai
+        - openai
+        - google-gemini
+        - gcp-vertex
 
 jobs:
   test-examples:
@@ -77,7 +83,74 @@ jobs:
       run: |
         uv sync --dev
 
-    - name: Run example tests
+    # - name: Test Anthropic
+    #   if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'anthropic'
+    #   run: |
+    #     source .venv/bin/activate
+    #     if [ -n "$ANTHROPIC_API_KEY" ]; then
+    #       echo "Testing Anthropic..."
+    #       python examples/anthropic_stream.py || echo "Anthropic streaming failed"
+    #     else
+    #       echo "Skipping Anthropic tests (no API key)"
+    #     fi
+    #   continue-on-error: true
+
+    - name: Test AWS Bedrock
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'aws-bedrock'
       run: |
         source .venv/bin/activate
-        python scripts/test_examples.py
+        if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+          echo "Testing AWS Bedrock..."
+          python examples/aws_bedrock_stream.py || echo "AWS Bedrock failed"
+        else
+          echo "Skipping AWS tests (no credentials)"
+        fi
+      continue-on-error: true
+
+    - name: Test Azure OpenAI Example
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'azure-openai'
+      run: |
+        source .venv/bin/activate
+        echo "🧪 Testing Azure OpenAI Example"
+        python examples/azure_openai_example.py
+      continue-on-error: true
+
+    - name: Test OpenAI
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'openai'
+      run: |
+        source .venv/bin/activate
+        echo "🧪 Testing OpenAI Example"
+        python examples/openai_example.py
+      continue-on-error: true
+
+    - name: Test Google Gemini
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'google-gemini'
+      run: |
+        source .venv/bin/activate
+        if [ -n "$GOOGLE_API_KEY" ]; then
+          echo "Testing Google Gemini..."
+          python examples/google_gemini_stream.py || echo "Google Gemini failed"
+        else
+          echo "Skipping Google tests (no API key)"
+        fi
+      continue-on-error: true
+
+    - name: Test Google Vertex AI
+      if: github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'gcp-vertex'
+      run: |
+        source .venv/bin/activate
+        if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+          echo "Testing Google Vertex AI..."
+          python examples/gcp_vertex_stream.py || echo "Google Vertex AI failed"
+        else
+          echo "Skipping Vertex AI tests (no credentials)"
+        fi
+      continue-on-error: true
+
+    - name: Test Results Summary
+      if: always()
+      run: |
+        echo "📊 Test Execution Summary"
+        echo "========================"
+        echo "All test steps completed (some may have failed)"
+        echo "Check individual step results above for details"

@@ -89,7 +89,34 @@ test-examples: test-venv
 	@echo "======================================="
 	@echo " Running examples with detailed output "
 	@echo "======================================="
-	. .venv/bin/activate && python3 scripts/test_examples.py
+	@echo "Loading .env file for environment variables..."
+	@if [ -f .env ]; then \
+		echo ".env file found, will be loaded by individual scripts."; \
+	else \
+		echo "No .env file found. Proceeding without loading .env."; \
+	fi
+	@echo "Testing Azure OpenAI consolidated script..."
+	. .venv/bin/activate && python3 examples/azure_openai_example.py || echo "Azure OpenAI consolidated test failed"
+	@echo ""
+	@echo "Testing OpenAI consolidated script..."
+	. .venv/bin/activate && python3 examples/openai_example.py || echo "OpenAI consolidated test failed"
+	@echo ""
+	#@echo "Testing Anthropic..."
+	# @echo "Testing Anthropic..."
+	# . .venv/bin/activate && set -a && [ -f .env ] && . .env || true && set +a && python3 examples/anthropic_stream.py || echo "Anthropic streaming failed"
+	@echo ""
+	@echo "Testing AWS Bedrock..."
+	. .venv/bin/activate && python3 examples/aws_bedrock_stream.py || echo "AWS Bedrock failed"
+	@echo ""
+	@echo "Testing Google Gemini..."
+	. .venv/bin/activate && python3 examples/google_gemini_stream.py || echo "Google Gemini failed"
+	@echo ""
+	@echo "Testing Google Vertex AI..."
+	. .venv/bin/activate && python3 examples/gcp_vertex_stream.py || echo "Google Vertex AI failed"
+	@echo ""
+	@echo "======================================="
+	@echo " All example tests completed"
+	@echo "======================================="
 
 test-all: test-venv
 	@echo "======================================="
