@@ -467,7 +467,6 @@ class LLMFactory:
     # LangChain handles this internally
 
     return ChatOpenAI(
-        default_headers=openai_headers,
         **openai_kwargs,
         **kwargs,
     )
