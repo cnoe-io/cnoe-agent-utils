@@ -4,7 +4,13 @@
 [![Unit Tests](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
 [![Test Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml)
 [![Publish Python Package](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/cnoe-io/6e2b7b6c7e6e4c8e8e7e6e7e6e7e6e7e/raw/coverage-badge.json)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
 
+[![Test AWS Bedrock Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-aws-bedrock.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-aws-bedrock.yml)
+[![Test Azure OpenAI Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-azure-openai.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-azure-openai.yml)
+[![Test OpenAI Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-openai.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-openai.yml)
+[![Test GCP Vertex AI Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-gcp-vertex.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-gcp-vertex.yml)
+[![Test Google Gemini Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-google-gemini.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-google-gemini.yml)
 
 * **Reusable utilities and abstractions** for building agent-based (LLM-powered) systems.
 * **Centralized LLM Factory** supporting major providers (AWS, Azure, GCP, OpenAI, Gemini, Anthropic).

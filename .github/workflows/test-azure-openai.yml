@@ -57,7 +57,7 @@ jobs:
         source .venv/bin/activate
         echo "🧪 Testing Azure OpenAI Example"
         python examples/azure_openai_example.py
-        echo "::set-output name=status::success"
+        echo "status=success" >> $GITHUB_OUTPUT
       continue-on-error: true
 
     - name: Comment test results on PR

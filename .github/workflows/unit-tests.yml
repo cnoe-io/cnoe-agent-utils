@@ -94,6 +94,22 @@ jobs:
         name: coverage-report
         path: coverage.xml
 
+    - name: Generate coverage badge JSON
+      run: |
+        pip install coverage-badge
+        coverage-badge -o coverage-badge.json -f coverage.xml
+
+    - name: Upload badge JSON to Gist
+      env:
+        GIST_ID: 6e2b7b6c7e6e4c8e8e7e6e7e6e7e6e7e
+        GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+      run: |
+        curl -X PATCH \
+          -H "Authorization: token $GIST_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/gists/$GIST_ID \
+          -d "{\"files\": {\"coverage-badge.json\": {\"content\": \"$(cat coverage-badge.json | jq -Rs .)\"}}}"
+
     - name: Comment coverage summary on PR
       if: github.event_name == 'pull_request'
       uses: irongut/CodeCoverageSummary@v1.3.0

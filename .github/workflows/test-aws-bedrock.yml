@@ -58,10 +58,10 @@ jobs:
         if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
           echo "Testing AWS Bedrock..."
           python examples/aws_bedrock_stream.py
-          echo "::set-output name=status::success"
+          echo "status=success" >> $GITHUB_OUTPUT
         else
           echo "Skipping AWS tests (no credentials)"
-          echo "::set-output name=status::skipped"
+          echo "status=skipped" >> $GITHUB_OUTPUT
         fi
       continue-on-error: true
 
