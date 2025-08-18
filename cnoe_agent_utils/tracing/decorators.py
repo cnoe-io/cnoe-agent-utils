@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 AsyncStreamFunc = TypeVar('AsyncStreamFunc', bound=Callable[..., AsyncIterable[dict[str, Any]]])
 
 def trace_agent_stream(
-    agent_name: str, 
+    agent_name: str,
     trace_name: Optional[str] = "ai-platform-engineer",
     update_input: bool = False
 ) -> Callable[[AsyncStreamFunc], AsyncStreamFunc]:
@@ -49,7 +49,7 @@ def trace_agent_stream(
     This decorator eliminates:
     - 23-29 lines of conditional langfuse imports (handled by TracingManager)
     - 15+ lines of trace ID logging and validation
-    - 30+ lines of span creation and management  
+    - 30+ lines of span creation and management
     - 20+ lines of duplicated non-tracing execution path
     - Environment checking and configuration setup
     
@@ -58,7 +58,7 @@ def trace_agent_stream(
     Args:
         agent_name: Name of the agent (e.g., "argocd", "jira", "slack")
         trace_name: Custom name for the trace (defaults to "ai-platform-engineer")
-        update_input: Whether to re-include the original input when updating trace with output 
+        update_input: Whether to re-include the original input when updating trace with output
                      (defaults to False). Set to True to preserve input throughout trace lifecycle.
         
     Returns:
@@ -66,7 +66,7 @@ def trace_agent_stream(
         
     Usage:
         # Basic usage (uses default trace name "ai-platform-engineer")
-        @trace_agent_stream("slack") 
+        @trace_agent_stream("slack")
         async def stream(self, query: str, context_id: str, trace_id: str = None):
         
         # With custom trace name
@@ -93,9 +93,9 @@ def trace_agent_stream(
     def decorator(stream_func: AsyncStreamFunc) -> AsyncStreamFunc:
         @wraps(stream_func)
         async def wrapper(
-            self: Any, 
-            query: str, 
-            context_id: str, 
+            self: Any,
+            query: str,
+            context_id: str,
             trace_id: Optional[str] = None
         ) -> AsyncIterable[dict[str, Any]]:
             

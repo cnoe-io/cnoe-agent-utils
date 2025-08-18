@@ -1,8 +1,16 @@
 # 🤖 cnoe-agent-utils
 
 [![PyPI version](https://img.shields.io/pypi/v/cnoe-agent-utils.svg)](https://pypi.org/project/cnoe-agent-utils/)
+[![Unit Tests](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
+[![Test Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-examples.yml)
 [![Publish Python Package](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/pypi.yml)
-[![commit-msg](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/conventional_commits.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/conventional_commits.yml)
+[![Coverage Badge](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
+
+[![Test AWS Bedrock Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-aws-bedrock.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-aws-bedrock.yml)
+[![Test Azure OpenAI Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-azure-openai.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-azure-openai.yml)
+[![Test OpenAI Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-openai.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-openai.yml)
+[![Test GCP Vertex AI Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-gcp-vertex.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-gcp-vertex.yml)
+[![Test Google Gemini Examples](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-google-gemini.yml/badge.svg)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/test-google-gemini.yml)
 
 * **Reusable utilities and abstractions** for building agent-based (LLM-powered) systems.
 * **Centralized LLM Factory** supporting major providers (AWS, Azure, GCP, OpenAI, Gemini, Anthropic).
@@ -56,17 +64,62 @@ pip install uv
 
 ### 📦 Installation
 
+#### Installation Options
+
+**Default Installation (recommended for most users):**
+
 ```bash
 pip install cnoe-agent-utils
 ```
+This installs all dependencies and provides full functionality. It's equivalent to `pip install 'cnoe-agent-utils[all]'`.
 
-Or, if you are developing locally:
+**Minimal Installation (specific functionality only):**
+Use these when you only need specific functionality or want to minimize package size:
+
+```bash
+# Anthropic Claude support only
+pip install "cnoe-agent-utils[anthropic]"
+
+# OpenAI support (openai.com GPT models) only
+pip install "cnoe-agent-utils[openai]"
+
+# Azure OpenAI support (Azure-hosted GPT models) only
+pip install "cnoe-agent-utils[azure]"
+
+# AWS support (Bedrock, etc.) only
+pip install "cnoe-agent-utils[aws]"
+
+# Google Cloud support (Vertex AI, Gemini) only
+pip install "cnoe-agent-utils[gcp]"
+
+# Advanced tracing and observability (Langfuse, OpenTelemetry) only
+pip install "cnoe-agent-utils[tracing]"
+
+# Development dependencies (testing, linting, etc.)
+pip install "cnoe-agent-utils[dev]"
+```
+
+#### Using uv
+```bash
+# Default installation (all dependencies)
+uv add cnoe-agent-utils
+
+# Minimal installation (specific functionality only)
+uv add "cnoe-agent-utils[anthropic]"
+uv add "cnoe-agent-utils[openai]"
+uv add "cnoe-agent-utils[azure]"
+uv add "cnoe-agent-utils[aws]"
+uv add "cnoe-agent-utils[gcp]"
+uv add "cnoe-agent-utils[tracing]"
+```
+
+#### Local Development
+If you are developing locally:
 
 ```bash
 git clone https://github.com/cnoe-agent-utils/cnoe-agent-utils.git
 cd cnoe-agent-utils
-poetry build
-poetry install
+uv sync
 ```
 
 ---

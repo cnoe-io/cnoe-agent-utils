@@ -20,7 +20,7 @@ def extract_trace_id_from_context(context: Any) -> Optional[str]:
     Extract trace_id from A2A RequestContext message metadata.
     
     This utility eliminates the need to duplicate trace_id extraction logic
-    across every agent executor implementation. Always returns None if 
+    across every agent executor implementation. Always returns None if
     tracing is disabled or any error occurs.
     
     Args:

@@ -1,0 +1,91 @@
+name: Test GCP Vertex AI Examples
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-gcp-vertex:
+    name: Test GCP Vertex AI Examples
+    runs-on: ubuntu-latest
+    env:
+      # Google Cloud
+      GOOGLE_APPLICATION_CREDENTIALS_ENV: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_ENV }}
+      GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+      VERTEXAI_MODEL_NAME: ${{ secrets.VERTEXAI_MODEL_NAME }}
+
+      # Configuration
+      LLM_SHOW_TIMING: ${{ secrets.LLM_SHOW_TIMING }}
+      ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
+      LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: latest
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .venv
+          .uv
+        key: ${{ runner.os }}-3.13-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-3.13-
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Test GCP Vertex AI
+      id: test-gcp-vertex
+      run: |
+        source .venv/bin/activate
+        if [ -n "$GOOGLE_APPLICATION_CREDENTIALS_ENV" ]; then
+          echo "Testing Google Vertex AI..."
+          python examples/gcp_vertex_stream.py
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "Skipping Vertex AI tests (no credentials)"
+          echo "status=skipped" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
+
+    - name: Comment test results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const stepResult = '${{ steps.test-gcp-vertex.outputs.status }}';
+          let summary = "### 🧪 GCP Vertex AI Test Results\n\n";
+
+          if (stepResult === "success") {
+            summary += "✅ **GCP Vertex AI Examples**: PASS\n";
+          } else if (stepResult === "skipped") {
+            summary += "⚠️ **GCP Vertex AI Examples**: SKIPPED (no credentials)\n";
+          } else {
+            summary += "❌ **GCP Vertex AI Examples**: FAIL\n";
+          }
+
+          summary += "\n---\n";
+          summary += "🔗 [View full workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})";
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });

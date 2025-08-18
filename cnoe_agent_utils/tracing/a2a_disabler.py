@@ -62,7 +62,7 @@ def disable_a2a_tracing() -> bool:
     try:
         # Create no-op decorators to replace a2a's trace decorators
         def noop_trace_function(
-            func: Union[F, None] = None, 
+            func: Union[F, None] = None,
             **_kwargs: Any
         ) -> Union[F, Callable[[F], F]]:
             """No-op replacement for trace_function decorator."""
@@ -71,7 +71,7 @@ def disable_a2a_tracing() -> bool:
             return func  # Return function unchanged
         
         def noop_trace_class(
-            cls: Union[C, None] = None, 
+            cls: Union[C, None] = None,
             **_kwargs: Any
         ) -> Union[C, Callable[[C], C]]:
             """No-op replacement for trace_class decorator."""

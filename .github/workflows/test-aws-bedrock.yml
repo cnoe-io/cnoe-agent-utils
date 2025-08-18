@@ -1,0 +1,92 @@
+name: Test AWS Bedrock Examples
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-aws-bedrock:
+    name: Test AWS Bedrock Examples
+    runs-on: ubuntu-latest
+    env:
+      # AWS
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_BEDROCK_MODEL_ID: ${{ secrets.AWS_BEDROCK_MODEL_ID }}
+
+      # Configuration
+      LLM_SHOW_TIMING: ${{ secrets.LLM_SHOW_TIMING }}
+      ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
+      LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: latest
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .venv
+          .uv
+        key: ${{ runner.os }}-3.13-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-3.13-
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Test AWS Bedrock
+      id: test-aws-bedrock
+      run: |
+        source .venv/bin/activate
+        if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+          echo "Testing AWS Bedrock..."
+          python examples/aws_bedrock_stream.py
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "Skipping AWS tests (no credentials)"
+          echo "status=skipped" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
+
+    - name: Comment test results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const stepResult = '${{ steps.test-aws-bedrock.outputs.status }}';
+          let summary = "### 🧪 AWS Bedrock Test Results\n\n";
+
+          if (stepResult === "success") {
+            summary += "✅ **AWS Bedrock Examples**: PASS\n";
+          } else if (stepResult === "skipped") {
+            summary += "⚠️ **AWS Bedrock Examples**: SKIPPED (no credentials)\n";
+          } else {
+            summary += "❌ **AWS Bedrock Examples**: FAIL\n";
+          }
+
+          summary += "\n---\n";
+          summary += "🔗 [View full workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})";
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });

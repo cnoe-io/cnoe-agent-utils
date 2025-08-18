@@ -1,0 +1,122 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - unit
+        - coverage
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    env:
+      # OpenAI
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL_NAME: ${{ secrets.OPENAI_MODEL_NAME }}
+
+      # Azure OpenAI
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+      AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+
+      # Anthropic
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # Google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+      # AWS
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_BEDROCK_MODEL_NAME: ${{ secrets.AWS_BEDROCK_MODEL_NAME }}
+
+      # Configuration
+      LLM_SHOW_TIMING: ${{ secrets.LLM_SHOW_TIMING }}
+      ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
+      LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: latest
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .venv
+          .uv
+        key: ${{ runner.os }}-3.13-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-3.13-
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Run linting
+      run: |
+        source .venv/bin/activate
+        ruff check cnoe_agent_utils tests
+
+    - name: Run unit tests
+      if: github.event.inputs.test_type != 'coverage' || github.event.inputs.test_type == 'all' || github.event_name != 'workflow_dispatch'
+      run: |
+        source .venv/bin/activate
+        pytest tests/ -v --cov=cnoe_agent_utils --cov-report=term-missing --cov-report=xml
+    - name: Upload coverage to PR
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.xml
+
+    - name: Generate coverage badge
+      run: |
+        pip install 'genbadge[all]'
+        genbadge coverage -i coverage.xml -o coverage-badge.svg
+
+    - name: Upload coverage badge SVG as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-badge
+        path: coverage-badge.svg
+
+    - name: Comment coverage summary on PR
+      if: github.event_name == 'pull_request'
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        filename: coverage.xml
+        badge: true
+        format: markdown
+        output: both
+        fail_below_min: false
+
+    - name: Add coverage summary as PR comment
+      if: github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        path: code-coverage-results.md

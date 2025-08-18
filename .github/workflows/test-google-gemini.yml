@@ -1,0 +1,89 @@
+name: Test Google Gemini Examples
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-google-gemini:
+    name: Test Google Gemini Examples
+    runs-on: ubuntu-latest
+    env:
+      # Google
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+      # Configuration
+      LLM_SHOW_TIMING: ${{ secrets.LLM_SHOW_TIMING }}
+      ENABLE_TRACING: ${{ secrets.ENABLE_TRACING }}
+      LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        version: latest
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .venv
+          .uv
+        key: ${{ runner.os }}-3.13-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-3.13-
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Test Google Gemini
+      id: test-google-gemini
+      run: |
+        source .venv/bin/activate
+        if [ -n "$GOOGLE_API_KEY" ]; then
+          echo "Testing Google Gemini..."
+          python examples/google_gemini_stream.py
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "Skipping Google tests (no API key)"
+          echo "status=skipped" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
+
+    - name: Comment test results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const stepResult = '${{ steps.test-google-gemini.outputs.status }}';
+          let summary = "### 🧪 Google Gemini Test Results\n\n";
+
+          if (stepResult === "success") {
+            summary += "✅ **Google Gemini Examples**: PASS\n";
+          } else if (stepResult === "skipped") {
+            summary += "⚠️ **Google Gemini Examples**: SKIPPED (no API key)\n";
+          } else {
+            summary += "❌ **Google Gemini Examples**: FAIL\n";
+          }
+
+          summary += "\n---\n";
+          summary += "🔗 [View full workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})";
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
