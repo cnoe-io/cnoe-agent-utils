@@ -1,8 +1,25 @@
-## Unreleased
+## 0.3.0 (2025-08-17)
 
 ### Feat
 
 - add gpt-5 and streaming support
+
+### Fix
+
+- updates
+- updates
+- updates
+- update new GHA tests
+- add coverage as comment
+- unit tests gha
+- update gcp creds for example run
+- unit tests
+- update GHA
+- update GHA
+- updates
+- lint
+- updates
+- 'LLMFactory' object has no attribute 'provider'
 
 ### Refactor
 
