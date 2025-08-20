@@ -183,6 +183,22 @@ class TestLLMFactoryExtendedCoverage:
                 # Some providers might fail due to missing credentials, but shouldn't fail validation
                 assert "Unsupported provider" not in str(e)
 
+    def test_openai_default_headers(self):
+        """Test that OPENAI_DEFAULT_HEADERS is correctly parsed and passed to ChatOpenAI."""
+        example_headers = {"Authorization": "Bearer test-token", "X-Custom-Header": "custom-value"}
+        with patch.dict(os.environ, {
+            "OPENAI_API_KEY": "test-api-key",
+            "OPENAI_MODEL_NAME": "gpt-3.5-turbo",
+            "OPENAI_DEFAULT_HEADERS": str(example_headers).replace("'", '"'),
+        }), \
+        patch("cnoe_agent_utils.llm_factory.ChatOpenAI") as mock_chat_openai:
+            factory = LLMFactory("openai")
+            factory.get_llm()
+            # Check that default_headers was passed and matches example_headers
+            args, kwargs = mock_chat_openai.call_args
+            assert "default_headers" in kwargs
+            assert kwargs["default_headers"] == example_headers
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
