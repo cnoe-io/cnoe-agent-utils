@@ -252,7 +252,7 @@ class LLMFactory:
       "aws_secret_access_key": aws_secret_access_key,
       "region_name": region_name,
       "temperature": temperature if temperature is not None else 0,
-      "streaming": True,
+      "streaming": _as_bool(os.getenv("AWS_BEDROCK_STREAMING",os.getenv("LLM_STREAMING","true")), True),
       "beta_use_converse_api": True,  # Use Converse API for better performance
       "model_kwargs": model_kwargs,
       **kwargs,
