@@ -163,6 +163,103 @@ Run the example:
 uv run examples/test_aws_bedrock_claude.py
 ```
 
+#### AWS Bedrock Prompt Caching
+
+AWS Bedrock supports **prompt caching** to reduce latency and costs by caching repeated context across requests. This feature is particularly beneficial for:
+- Multi-turn conversations with long system prompts
+- Repeated use of large context documents
+- Agent systems with consistent instructions
+
+**Enable prompt caching:**
+
+```bash
+export AWS_BEDROCK_ENABLE_PROMPT_CACHE=true
+```
+
+**Supported Models:**
+
+| Model | Model ID | Min Tokens |
+|-------|----------|------------|
+| Claude 3 Opus 4.1 | `anthropic.claude-opus-4-1-20250805-v1:0` | 1,024 |
+| Claude Opus 4 | `anthropic.claude-opus-4-20250514-v1:0` | 1,024 |
+| Claude Sonnet 4.5 | `anthropic.claude-sonnet-4-5-20250929-v1:0` | 1,024 |
+| Claude Sonnet 4 | `anthropic.claude-sonnet-4-20250514-v1:0` | 1,024 |
+| Claude 3.7 Sonnet | `anthropic.claude-3-7-sonnet-20250219-v1:0` | 1,024 |
+| Claude 3.5 Sonnet v2 | `anthropic.claude-3-5-sonnet-20241022-v2:0` | 1,024 |
+| Claude 3.5 Haiku | `anthropic.claude-3-5-haiku-20241022-v1:0` | **2,048** |
+| Amazon Nova Micro | `amazon.nova-micro-v1:0` | 1,024 |
+| Amazon Nova Lite | `amazon.nova-lite-v1:0` | 1,024 |
+| Amazon Nova Pro | `amazon.nova-pro-v1:0` | 1,024 |
+| Amazon Nova Premier | `us.amazon.nova-premier-v1:0` | 1,024 |
+
+**Note:** Model IDs may include regional prefixes (`us.`, `eu.`, `ap.`, `me.`, `ca.`, `sa.`, `af.`) depending on your AWS account configuration. Both formats are supported:
+- Standard: `anthropic.claude-3-7-sonnet-20250219-v1:0`
+- Regional: `us.anthropic.claude-3-7-sonnet-20250219-v1:0`
+
+The library automatically normalizes model IDs for cache compatibility checking.
+
+**Benefits:**
+- Up to **85% reduction in latency** for cached content
+- Up to **90% reduction in costs** for cached tokens
+- **5-minute cache TTL** (automatically managed by AWS)
+- Maximum **4 cache checkpoints** per request
+
+**Usage Example:**
+
+```python
+import os
+from cnoe_agent_utils.llm_factory import LLMFactory
+from langchain_core.messages import SystemMessage, HumanMessage
+
+# Enable caching
+os.environ["AWS_BEDROCK_ENABLE_PROMPT_CACHE"] = "true"
+
+# Initialize LLM
+llm = LLMFactory("aws-bedrock").get_llm()
+
+# Create cache point for system message
+cache_point = llm.create_cache_point()
+
+# Build messages with cache control
+messages = [
+    SystemMessage(content=[
+        {"text": "You are a helpful AI assistant with expertise in..."},
+        cache_point  # Marks cache checkpoint
+    ]),
+    HumanMessage(content="What is your primary function?")
+]
+
+# Invoke with caching
+response = llm.invoke(messages)
+
+# Check cache statistics in response metadata
+if hasattr(response, 'response_metadata'):
+    usage = response.response_metadata.get('usage', {})
+    print(f"Cache read tokens: {usage.get('cacheReadInputTokens', 0)}")
+    print(f"Cache creation tokens: {usage.get('cacheCreationInputTokens', 0)}")
+```
+
+**Run the caching example:**
+
+```bash
+uv run examples/aws_bedrock_cache_example.py
+```
+
+**Monitoring Cache Performance:**
+
+Cache hit/miss statistics are available in:
+1. **Response metadata** - `cacheReadInputTokens` and `cacheCreationInputTokens`
+2. **CloudWatch metrics** - Track cache performance across all requests
+3. **Application logs** - Enable via `AWS_CREDENTIALS_DEBUG=true`
+
+**Best Practices:**
+- Use cache for system prompts and context that remain consistent across requests
+- Ensure cached content meets minimum token requirements:
+  - **Claude 3.5 Haiku:** 2,048 tokens minimum
+  - **All other models:** 1,024 tokens minimum
+- Place cache points strategically (after system messages, large context documents, or tool definitions)
+- Monitor cache hit rates to optimize placement
+
 ---
 
 ### ☁️ Azure OpenAI
