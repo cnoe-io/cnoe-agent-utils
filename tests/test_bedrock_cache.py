@@ -3,7 +3,6 @@ Tests for AWS Bedrock prompt caching functionality.
 """
 
 import os
-import pytest
 from unittest.mock import patch, MagicMock
 from cnoe_agent_utils.llm_factory import LLMFactory
 
