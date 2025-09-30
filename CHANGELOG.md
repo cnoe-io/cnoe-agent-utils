@@ -1,3 +1,16 @@
+## Unreleased
+
+### Feat
+
+- **aws-bedrock**: Add prompt caching support for AWS Bedrock models
+  - Uses ChatBedrockConverse when AWS_BEDROCK_ENABLE_PROMPT_CACHE=true
+  - Falls back to ChatBedrock when caching disabled
+  - Configurable via AWS_BEDROCK_ENABLE_PROMPT_CACHE environment variable
+  - Model compatibility validated by AWS Bedrock API (no hardcoded model lists)
+  - Passes model IDs unchanged to AWS (supports regional prefixes and all model versions)
+  - Up to 85% latency reduction and 90% cost reduction for cached tokens
+  - Comprehensive example and test coverage
+
 ## 0.3.0 (2025-08-17)
 
 ### Feat

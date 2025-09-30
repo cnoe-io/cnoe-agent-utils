@@ -163,6 +163,89 @@ Run the example:
 uv run examples/test_aws_bedrock_claude.py
 ```
 
+#### AWS Bedrock Prompt Caching
+
+AWS Bedrock supports **prompt caching** to reduce latency and costs by caching repeated context across requests. This feature is particularly beneficial for:
+- Multi-turn conversations with long system prompts
+- Repeated use of large context documents
+- Agent systems with consistent instructions
+
+**Enable prompt caching:**
+
+```bash
+export AWS_BEDROCK_ENABLE_PROMPT_CACHE=true
+```
+
+**Supported Models:**
+
+For the latest list of models that support prompt caching and their minimum token requirements, see the [AWS Bedrock Prompt Caching documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html).
+
+**Implementation Note:** When `AWS_BEDROCK_ENABLE_PROMPT_CACHE=true`, the library uses `ChatBedrockConverse` which has native prompt caching support. If your model doesn't support caching, AWS Bedrock will return a clear error message. There's no need to validate model compatibility in advance—AWS handles this automatically.
+
+**Note:** Model IDs may include regional prefixes (`us.`, `eu.`, `ap.`, etc.) depending on your AWS account configuration. Pass the full model ID as provided by AWS:
+- Example: `us.anthropic.claude-3-7-sonnet-20250219-v1:0`
+- Example: `anthropic.claude-opus-4-1-20250805-v1:0`
+
+**Benefits:**
+- Up to **85% reduction in latency** for cached content
+- Up to **90% reduction in costs** for cached tokens
+- **5-minute cache TTL** (automatically managed by AWS)
+- Maximum **4 cache checkpoints** per request
+
+**Usage Example:**
+
+```python
+import os
+from cnoe_agent_utils.llm_factory import LLMFactory
+from langchain_core.messages import SystemMessage, HumanMessage
+
+# Enable caching
+os.environ["AWS_BEDROCK_ENABLE_PROMPT_CACHE"] = "true"
+
+# Initialize LLM
+llm = LLMFactory("aws-bedrock").get_llm()
+
+# Create cache point for system message
+cache_point = llm.create_cache_point()
+
+# Build messages with cache control
+messages = [
+    SystemMessage(content=[
+        {"text": "You are a helpful AI assistant with expertise in..."},
+        cache_point  # Marks cache checkpoint
+    ]),
+    HumanMessage(content="What is your primary function?")
+]
+
+# Invoke with caching
+response = llm.invoke(messages)
+
+# Check cache statistics in response metadata
+if hasattr(response, 'response_metadata'):
+    usage = response.response_metadata.get('usage', {})
+    print(f"Cache read tokens: {usage.get('cacheReadInputTokens', 0)}")
+    print(f"Cache creation tokens: {usage.get('cacheCreationInputTokens', 0)}")
+```
+
+**Run the caching example:**
+
+```bash
+uv run examples/aws_bedrock_cache_example.py
+```
+
+**Monitoring Cache Performance:**
+
+Cache hit/miss statistics are available in:
+1. **Response metadata** - `cacheReadInputTokens` and `cacheCreationInputTokens`
+2. **CloudWatch metrics** - Track cache performance across all requests
+3. **Application logs** - Enable via `AWS_CREDENTIALS_DEBUG=true`
+
+**Best Practices:**
+- Use cache for system prompts and context that remain consistent across requests
+- Ensure cached content meets minimum token requirements (see AWS documentation for model-specific limits)
+- Place cache points strategically (after system messages, large context documents, or tool definitions)
+- Monitor cache hit rates to optimize placement
+
 ---
 
 ### ☁️ Azure OpenAI

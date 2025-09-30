@@ -12,11 +12,12 @@ import dotenv
 
 # Conditional imports for optional dependencies
 try:
-    from langchain_aws import ChatBedrock
+    from langchain_aws import ChatBedrock, ChatBedrockConverse
     _LANGCHAIN_AWS_AVAILABLE = True
 except ImportError:
     _LANGCHAIN_AWS_AVAILABLE = False
     ChatBedrock = None
+    ChatBedrockConverse = None
 
 try:
     from langchain_anthropic import ChatAnthropic
@@ -241,28 +242,57 @@ class LLMFactory:
       raise EnvironmentError(
         f"Missing the following AWS Bedrock environment variable(s): {', '.join(missing_vars)}."
       )
+    # Check for prompt caching configuration
+    enable_cache = _as_bool(os.getenv("AWS_BEDROCK_ENABLE_PROMPT_CACHE"), False)
+
+    if enable_cache:
+      logging.info(f"[LLM] Prompt caching enabled for Bedrock model={model_id}. Using ChatBedrockConverse.")
+      logging.info("[LLM] If model doesn't support caching, AWS Bedrock API will return an error.")
+
     logging.info(f"[LLM] Bedrock model={model_id} profile={credentials_profile} region={region_name}")
 
-    model_kwargs = {"response_format": response_format} if response_format else {}
-
-    bedrock_args = {
+    # Build common args for both ChatBedrock and ChatBedrockConverse
+    common_args = {
       "model_id": model_id,
-      "provider": provider if provider else "amazon",
-      "aws_access_key_id": aws_access_key_id,
-      "aws_secret_access_key": aws_secret_access_key,
-      "region_name": region_name,
       "temperature": temperature if temperature is not None else 0,
-      "streaming": _as_bool(os.getenv("AWS_BEDROCK_STREAMING",os.getenv("LLM_STREAMING","true")), True),
-      "beta_use_converse_api": True,  # Use Converse API for better performance
-      "model_kwargs": model_kwargs,
       **kwargs,
     }
-    if credentials_profile:
-      bedrock_args["credentials_profile_name"] = credentials_profile
-    if region_name:
-      bedrock_args["region_name"] = region_name
 
-    return ChatBedrock(**bedrock_args)
+    # Add optional parameters only if they have values
+    if aws_access_key_id:
+      common_args["aws_access_key_id"] = aws_access_key_id
+    if aws_secret_access_key:
+      common_args["aws_secret_access_key"] = aws_secret_access_key
+    if credentials_profile:
+      common_args["credentials_profile_name"] = credentials_profile
+    if region_name:
+      common_args["region_name"] = region_name
+    if provider:
+      common_args["provider"] = provider
+
+    # Add model_kwargs only if not empty (prevents circular reference issues)
+    if response_format:
+      common_args["model_kwargs"] = {"response_format": response_format}
+
+    # Use ChatBedrockConverse when caching is enabled (native prompt caching support)
+    # Otherwise use ChatBedrock (legacy)
+    if enable_cache:
+        # ChatBedrockConverse doesn't support 'streaming' parameter
+        # Streaming is enabled by default for Converse API
+        llm = ChatBedrockConverse(**common_args)
+        logging.info("[LLM] Using ChatBedrockConverse with native prompt caching support")
+    else:
+        # ChatBedrock supports streaming and needs beta_use_converse_api
+        streaming = _as_bool(os.getenv("AWS_BEDROCK_STREAMING", os.getenv("LLM_STREAMING", "true")), True)
+        use_converse_api = _as_bool(os.getenv("AWS_BEDROCK_USE_CONVERSE_API", "true"), True)
+        llm = ChatBedrock(
+          **common_args,
+          streaming=streaming,
+          beta_use_converse_api=use_converse_api
+        )
+        logging.info("[LLM] Using ChatBedrock")
+
+    return llm
 
   def _build_anthropic_claude_llm(
     self,
