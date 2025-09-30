@@ -12,11 +12,12 @@ import dotenv
 
 # Conditional imports for optional dependencies
 try:
-    from langchain_aws import ChatBedrock
+    from langchain_aws import ChatBedrock, ChatBedrockConverse
     _LANGCHAIN_AWS_AVAILABLE = True
 except ImportError:
     _LANGCHAIN_AWS_AVAILABLE = False
     ChatBedrock = None
+    ChatBedrockConverse = None
 
 try:
     from langchain_anthropic import ChatAnthropic
@@ -188,84 +189,6 @@ class LLMFactory:
   # Internal builders (one per provider)
   # ------------------------------------------------------------------ #
 
-  @staticmethod
-  def _get_cache_supported_models() -> set[str]:
-    """Return set of AWS Bedrock models supporting prompt caching.
-
-    Based on AWS documentation:
-    https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
-    """
-    return {
-      # Claude 4 models (Generally Available)
-      "anthropic.claude-opus-4-1-20250805-v1:0",
-      "anthropic.claude-opus-4-20250514-v1:0",
-      "anthropic.claude-sonnet-4-5-20250929-v1:0",
-      "anthropic.claude-sonnet-4-20250514-v1:0",
-      # Claude 3.7 models
-      "anthropic.claude-3-7-sonnet-20250219-v1:0",
-      # Claude 3.5 models
-      "anthropic.claude-3-5-haiku-20241022-v1:0",
-      "anthropic.claude-3-5-sonnet-20241022-v2:0",
-      # Amazon Nova models
-      "amazon.nova-micro-v1:0",
-      "amazon.nova-lite-v1:0",
-      "amazon.nova-pro-v1:0",
-      "us.amazon.nova-premier-v1:0",
-    }
-
-  def _normalize_model_id(self, model_id: str) -> str:
-    """Normalize model ID by removing regional prefixes and version suffixes.
-
-    Handles regional prefixes like 'us.', 'eu.', 'ap.', etc. and version
-    suffixes like ':0' to enable consistent model matching across regions.
-
-    Examples:
-      - 'us.anthropic.claude-3-5-sonnet-20241022-v2:0' -> 'anthropic.claude-3-5-sonnet-20241022-v2'
-      - 'anthropic.claude-3-7-sonnet-20250219-v1:0' -> 'anthropic.claude-3-7-sonnet-20250219-v1'
-    """
-    # Remove regional prefixes (us., eu., ap., me., ca., sa., af.)
-    regional_prefixes = {"us", "eu", "ap", "me", "ca", "sa", "af"}
-    parts = model_id.split(".", 1)
-    if len(parts) == 2 and parts[0] in regional_prefixes:
-      model_id = parts[1]
-
-    # Remove version suffix (:0, :1, etc.)
-    model_id = model_id.split(":", 1)[0]
-
-    return model_id
-
-  def _infer_provider(self, model_id: str) -> str | None:
-    """Infer provider from model ID prefix.
-
-    Returns appropriate provider based on model ID, or None if cannot infer.
-    """
-    normalized = self._normalize_model_id(model_id)
-
-    if normalized.startswith("anthropic."):
-      return "anthropic"
-    elif normalized.startswith("amazon."):
-      return "amazon"
-
-    return None
-
-  def _is_cache_supported(self, model_id: str) -> bool:
-    """Check if the given model ID supports prompt caching."""
-    normalized = self._normalize_model_id(model_id)
-    supported_models = self._get_cache_supported_models()
-
-    # Direct match on normalized IDs
-    if normalized in supported_models:
-      return True
-
-    # Family prefix match (e.g., "anthropic.claude-3-5-sonnet" matches any version)
-    for supported in supported_models:
-      # Get family prefix by removing last 2 segments (date and version)
-      family = supported.rsplit("-", 2)[0]
-      if normalized.startswith(family):
-        return True
-
-    return False
-
   def _build_aws_bedrock_llm(
     self,
     response_format: str | dict | None,
@@ -321,59 +244,53 @@ class LLMFactory:
       )
     # Check for prompt caching configuration
     enable_cache = _as_bool(os.getenv("AWS_BEDROCK_ENABLE_PROMPT_CACHE"), False)
-    cache_supported = self._is_cache_supported(model_id)
 
-    if enable_cache and cache_supported:
-      logging.info(f"[LLM] Prompt caching enabled for Bedrock model={model_id}")
-    elif enable_cache and not cache_supported:
-      logging.warning(
-        f"[LLM] Prompt caching requested but not supported for model={model_id}. "
-        f"Supported models: {', '.join(sorted(self._get_cache_supported_models()))}"
-      )
+    if enable_cache:
+      logging.info(f"[LLM] Prompt caching enabled for Bedrock model={model_id}. Using ChatBedrockConverse.")
+      logging.info(f"[LLM] If model doesn't support caching, AWS Bedrock API will return an error.")
 
     logging.info(f"[LLM] Bedrock model={model_id} profile={credentials_profile} region={region_name}")
 
-    model_kwargs = {"response_format": response_format} if response_format else {}
-
-    # Infer provider from model_id if not explicitly set
-    if not provider:
-      provider = self._infer_provider(model_id)
-      if provider:
-        logging.info(f"[LLM] Inferred provider '{provider}' from model_id")
-
-    # Make Converse API usage configurable
-    use_converse_api = _as_bool(os.getenv("AWS_BEDROCK_USE_CONVERSE_API", "true"), True)
-
-    bedrock_args = {
+    # Build common args for both ChatBedrock and ChatBedrockConverse
+    common_args = {
       "model_id": model_id,
-      "aws_access_key_id": aws_access_key_id,
-      "aws_secret_access_key": aws_secret_access_key,
-      "region_name": region_name,
       "temperature": temperature if temperature is not None else 0,
-      "streaming": _as_bool(os.getenv("AWS_BEDROCK_STREAMING",os.getenv("LLM_STREAMING","true")), True),
-      "beta_use_converse_api": use_converse_api,
-      "model_kwargs": model_kwargs,
       **kwargs,
     }
 
-    # Only set provider if we have one (inferred or explicit)
-    if provider:
-      bedrock_args["provider"] = provider
+    # Add optional parameters only if they have values
+    if aws_access_key_id:
+      common_args["aws_access_key_id"] = aws_access_key_id
+    if aws_secret_access_key:
+      common_args["aws_secret_access_key"] = aws_secret_access_key
     if credentials_profile:
-      bedrock_args["credentials_profile_name"] = credentials_profile
+      common_args["credentials_profile_name"] = credentials_profile
     if region_name:
-      bedrock_args["region_name"] = region_name
+      common_args["region_name"] = region_name
+    if provider:
+      common_args["provider"] = provider
 
-    llm = ChatBedrock(**bedrock_args)
+    # Add model_kwargs only if not empty (prevents circular reference issues)
+    if response_format:
+      common_args["model_kwargs"] = {"response_format": response_format}
 
-    # Verify cache support is available if requested
-    if enable_cache and cache_supported:
-      if not hasattr(llm, 'create_cache_point'):
-        logging.warning(
-          "[LLM] Prompt caching requested but langchain-aws version doesn't support "
-          "create_cache_point(). Please upgrade langchain-aws to enable caching. "
-          "See: https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html"
+    # Use ChatBedrockConverse when caching is enabled (native prompt caching support)
+    # Otherwise use ChatBedrock (legacy)
+    if enable_cache:
+        # ChatBedrockConverse doesn't support 'streaming' parameter
+        # Streaming is enabled by default for Converse API
+        llm = ChatBedrockConverse(**common_args)
+        logging.info("[LLM] Using ChatBedrockConverse with native prompt caching support")
+    else:
+        # ChatBedrock supports streaming and needs beta_use_converse_api
+        streaming = _as_bool(os.getenv("AWS_BEDROCK_STREAMING", os.getenv("LLM_STREAMING", "true")), True)
+        use_converse_api = _as_bool(os.getenv("AWS_BEDROCK_USE_CONVERSE_API", "true"), True)
+        llm = ChatBedrock(
+          **common_args,
+          streaming=streaming,
+          beta_use_converse_api=use_converse_api
         )
+        logging.info("[LLM] Using ChatBedrock")
 
     return llm
 

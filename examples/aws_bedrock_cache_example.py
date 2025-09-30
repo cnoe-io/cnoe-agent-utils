@@ -8,12 +8,8 @@ and costs for repeated context. Shows cache hit performance improvements.
 Requirements:
 - AWS credentials configured (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or AWS_PROFILE)
 - AWS_REGION set
-- AWS_BEDROCK_MODEL_ID set to a cache-supported model:
-  - Claude 4: anthropic.claude-opus-4-1-20250805-v1:0, anthropic.claude-opus-4-20250514-v1:0,
-    anthropic.claude-sonnet-4-5-20250929-v1:0, anthropic.claude-sonnet-4-20250514-v1:0
-  - Claude 3.7: anthropic.claude-3-7-sonnet-20250219-v1:0
-  - Claude 3.5: anthropic.claude-3-5-sonnet-20241022-v2:0, anthropic.claude-3-5-haiku-20241022-v1:0
-  - Amazon Nova: amazon.nova-micro-v1:0, amazon.nova-lite-v1:0, amazon.nova-pro-v1:0, us.amazon.nova-premier-v1:0
+- AWS_BEDROCK_MODEL_ID set to a cache-supported model
+  (see https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html)
 - AWS_BEDROCK_ENABLE_PROMPT_CACHE=true
 
 Cache Benefits:
@@ -49,6 +45,18 @@ def main():
 
     # Initialize LLM with caching enabled
     llm = LLMFactory("aws-bedrock").get_llm()
+
+    # Verify caching is supported
+    if not hasattr(llm, 'create_cache_point'):
+        print("\n" + "=" * 70)
+        print("ERROR: Prompt caching not available")
+        print("=" * 70)
+        print("Ensure the following:")
+        print("  1. AWS_BEDROCK_ENABLE_PROMPT_CACHE=true")
+        print("  2. Model supports caching (check AWS docs)")
+        print(f"\nCurrent model: {os.getenv('AWS_BEDROCK_MODEL_ID')}")
+        print("=" * 70)
+        sys.exit(1)
 
     # Create a long system prompt (>1024 tokens recommended for caching benefits)
     system_context = """

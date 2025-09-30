@@ -178,25 +178,13 @@ export AWS_BEDROCK_ENABLE_PROMPT_CACHE=true
 
 **Supported Models:**
 
-| Model | Model ID | Min Tokens |
-|-------|----------|------------|
-| Claude 3 Opus 4.1 | `anthropic.claude-opus-4-1-20250805-v1:0` | 1,024 |
-| Claude Opus 4 | `anthropic.claude-opus-4-20250514-v1:0` | 1,024 |
-| Claude Sonnet 4.5 | `anthropic.claude-sonnet-4-5-20250929-v1:0` | 1,024 |
-| Claude Sonnet 4 | `anthropic.claude-sonnet-4-20250514-v1:0` | 1,024 |
-| Claude 3.7 Sonnet | `anthropic.claude-3-7-sonnet-20250219-v1:0` | 1,024 |
-| Claude 3.5 Sonnet v2 | `anthropic.claude-3-5-sonnet-20241022-v2:0` | 1,024 |
-| Claude 3.5 Haiku | `anthropic.claude-3-5-haiku-20241022-v1:0` | **2,048** |
-| Amazon Nova Micro | `amazon.nova-micro-v1:0` | 1,024 |
-| Amazon Nova Lite | `amazon.nova-lite-v1:0` | 1,024 |
-| Amazon Nova Pro | `amazon.nova-pro-v1:0` | 1,024 |
-| Amazon Nova Premier | `us.amazon.nova-premier-v1:0` | 1,024 |
+For the latest list of models that support prompt caching and their minimum token requirements, see the [AWS Bedrock Prompt Caching documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html).
 
-**Note:** Model IDs may include regional prefixes (`us.`, `eu.`, `ap.`, `me.`, `ca.`, `sa.`, `af.`) depending on your AWS account configuration. Both formats are supported:
-- Standard: `anthropic.claude-3-7-sonnet-20250219-v1:0`
-- Regional: `us.anthropic.claude-3-7-sonnet-20250219-v1:0`
+**Implementation Note:** When `AWS_BEDROCK_ENABLE_PROMPT_CACHE=true`, the library uses `ChatBedrockConverse` which has native prompt caching support. If your model doesn't support caching, AWS Bedrock will return a clear error message. There's no need to validate model compatibility in advance—AWS handles this automatically.
 
-The library automatically normalizes model IDs for cache compatibility checking.
+**Note:** Model IDs may include regional prefixes (`us.`, `eu.`, `ap.`, etc.) depending on your AWS account configuration. Pass the full model ID as provided by AWS:
+- Example: `us.anthropic.claude-3-7-sonnet-20250219-v1:0`
+- Example: `anthropic.claude-opus-4-1-20250805-v1:0`
 
 **Benefits:**
 - Up to **85% reduction in latency** for cached content
@@ -254,9 +242,7 @@ Cache hit/miss statistics are available in:
 
 **Best Practices:**
 - Use cache for system prompts and context that remain consistent across requests
-- Ensure cached content meets minimum token requirements:
-  - **Claude 3.5 Haiku:** 2,048 tokens minimum
-  - **All other models:** 1,024 tokens minimum
+- Ensure cached content meets minimum token requirements (see AWS documentation for model-specific limits)
 - Place cache points strategically (after system messages, large context documents, or tool definitions)
 - Monitor cache hit rates to optimize placement
 

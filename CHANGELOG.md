@@ -3,9 +3,11 @@
 ### Feat
 
 - **aws-bedrock**: Add prompt caching support for AWS Bedrock models
-  - Support for Claude 4 (Opus 4.1, Opus 4, Sonnet 4.5, Sonnet 4), Claude 3.7/3.5 Sonnet, Claude 3.5 Haiku, and Amazon Nova models
+  - Uses ChatBedrockConverse when AWS_BEDROCK_ENABLE_PROMPT_CACHE=true
+  - Falls back to ChatBedrock when caching disabled
   - Configurable via AWS_BEDROCK_ENABLE_PROMPT_CACHE environment variable
-  - Automatic model compatibility validation
+  - Model compatibility validated by AWS Bedrock API (no hardcoded model lists)
+  - Passes model IDs unchanged to AWS (supports regional prefixes and all model versions)
   - Up to 85% latency reduction and 90% cost reduction for cached tokens
   - Comprehensive example and test coverage
 
