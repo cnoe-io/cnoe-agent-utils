@@ -9,10 +9,11 @@ Requirements:
 - AWS credentials configured (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or AWS_PROFILE)
 - AWS_REGION set
 - AWS_BEDROCK_MODEL_ID set to a cache-supported model:
-  - anthropic.claude-3-5-sonnet-20241022-v2:0
-  - anthropic.claude-3-7-sonnet-20250219
-  - anthropic.claude-3-5-haiku-20241022-v1:0
-  - amazon.nova-micro-v1:0, amazon.nova-lite-v1:0, amazon.nova-pro-v1:0
+  - Claude 4: anthropic.claude-opus-4-1-20250805-v1:0, anthropic.claude-opus-4-20250514-v1:0,
+    anthropic.claude-sonnet-4-5-20250929-v1:0, anthropic.claude-sonnet-4-20250514-v1:0
+  - Claude 3.7: anthropic.claude-3-7-sonnet-20250219-v1:0
+  - Claude 3.5: anthropic.claude-3-5-sonnet-20241022-v2:0, anthropic.claude-3-5-haiku-20241022-v1:0
+  - Amazon Nova: amazon.nova-micro-v1:0, amazon.nova-lite-v1:0, amazon.nova-pro-v1:0, us.amazon.nova-premier-v1:0
 - AWS_BEDROCK_ENABLE_PROMPT_CACHE=true
 
 Cache Benefits:
