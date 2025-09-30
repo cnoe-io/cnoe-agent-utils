@@ -247,7 +247,7 @@ class LLMFactory:
 
     if enable_cache:
       logging.info(f"[LLM] Prompt caching enabled for Bedrock model={model_id}. Using ChatBedrockConverse.")
-      logging.info(f"[LLM] If model doesn't support caching, AWS Bedrock API will return an error.")
+      logging.info("[LLM] If model doesn't support caching, AWS Bedrock API will return an error.")
 
     logging.info(f"[LLM] Bedrock model={model_id} profile={credentials_profile} region={region_name}")
 
