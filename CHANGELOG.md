@@ -1,3 +1,14 @@
+## Unreleased
+
+### Feat
+
+- **llm-factory**: add temperature environment variable support
+  - LLMFactory now reads provider-specific temperature from env vars (e.g., `BEDROCK_TEMPERATURE`, `OPENAI_TEMPERATURE`)
+  - `get_llm()` uses env var temperature when not explicitly provided
+  - Supports all providers: AWS Bedrock, OpenAI, Azure, Anthropic, Google Gemini, Vertex AI
+  - Defaults to 0.3 (optimized for tool-calling agents)
+  - Validates temperature range (0.0 to 2.0) with automatic clamping
+
 ## 0.3.1 (2025-09-30)
 
 ### Feat

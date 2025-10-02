@@ -166,6 +166,59 @@ class LLMFactory:
   # Public helpers
   # ------------------------------------------------------------------ #
 
+  def _get_default_temperature(self) -> float:
+    """Get temperature setting from provider-specific environment variable.
+
+    Checks provider-specific environment variables (e.g., BEDROCK_TEMPERATURE,
+    OPENAI_TEMPERATURE) with proper ordering to handle Azure before OpenAI.
+
+    Returns:
+        float: Temperature value between 0.0 and 2.0, defaulting to 0.3
+               (optimized for tool-calling agents)
+    """
+    provider = os.getenv("LLM_PROVIDER", "").lower()
+    temperature = 0.3  # Default temperature for tool-calling agents
+
+    # Provider to environment variable mapping (order matters for substring matching)
+    provider_temp_vars = {
+        "azure": "AZURE_TEMPERATURE",  # Check Azure before OpenAI
+        "openai": "OPENAI_TEMPERATURE",
+        "anthropic": "ANTHROPIC_TEMPERATURE",
+        "bedrock": "BEDROCK_TEMPERATURE",
+        "aws": "BEDROCK_TEMPERATURE",
+        "google": "GOOGLE_TEMPERATURE",
+        "gemini": "GOOGLE_TEMPERATURE",
+        "vertex": "VERTEXAI_TEMPERATURE",
+    }
+
+    # Find matching provider and get temperature
+    temp_str = "0.3"
+    for provider_keyword, env_var in provider_temp_vars.items():
+        if provider_keyword in provider:
+            temp_str = os.getenv(env_var, "0.3")
+            break
+
+    # Safe parsing with validation
+    # Strip comments if present (handle inline comments like "1  # comment")
+    if "#" in temp_str:
+        temp_str = temp_str.split("#")[0].strip()
+
+    try:
+        temperature = float(temp_str)
+        # Validate temperature range (most providers support 0.0 to 2.0)
+        if temperature < 0.0:
+            logging.warning(f"Temperature {temperature} below 0.0, using 0.0")
+            temperature = 0.0
+        elif temperature > 2.0:
+            logging.warning(f"Temperature {temperature} above 2.0, using 2.0")
+            temperature = 2.0
+    except (ValueError, TypeError):
+        logging.warning(f"Invalid temperature value '{temp_str}', using default 0.3")
+        temperature = 0.3
+
+    logging.debug(f"Using temperature {temperature} for provider '{provider}'")
+    return temperature
+
   def get_llm(
     self,
     response_format: str | dict | None = None,
@@ -179,7 +232,13 @@ class LLMFactory:
     The returned object is an instance of ``ChatOpenAI``,
     ``AzureChatOpenAI`` or ``ChatAnthropic`` depending on the selected
     *provider*.
+
+    If temperature is not specified, it will be read from provider-specific
+    environment variables (e.g., BEDROCK_TEMPERATURE, OPENAI_TEMPERATURE).
     """
+    # Use environment variable if temperature not explicitly provided
+    if temperature is None:
+        temperature = self._get_default_temperature()
 
     builder = getattr(self, f"_build_{self.provider}_llm")
     llm = builder(response_format, temperature, **kwargs)
