@@ -40,11 +40,11 @@ activate-venv:
 
 lint: setup-venv
 	@echo "Running ruff..."
-	. .venv/bin/activate && ruff check openapi_mcp_codegen tests
+	. .venv/bin/activate && ruff check cnoe_agent_utils tests
 
 ruff-fix: setup-venv
 	@echo "Running ruff and fix lint errors..."
-	. .venv/bin/activate && ruff check openapi_mcp_codegen tests --fix
+	. .venv/bin/activate && ruff check cnoe_agent_utils tests --fix
 
 # This rule allows passing arguments to the run target
 %:
