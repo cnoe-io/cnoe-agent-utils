@@ -287,5 +287,170 @@ class TestLLMFactoryIntegration:
             # The LLM should not be bound with tools
 
 
+class TestLLMFactoryTemperature:
+    """Test temperature configuration via environment variables."""
+
+    def test_default_temperature(self):
+        """Test default temperature when no env var is set."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {}, clear=True):
+            temp = factory._get_default_temperature()
+            assert temp == 0.0  # Default preserves backward compatibility
+
+    def test_bedrock_temperature_env_var(self):
+        """Test BEDROCK_TEMPERATURE env var."""
+        factory = LLMFactory("aws-bedrock")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "aws-bedrock", "BEDROCK_TEMPERATURE": "0.7"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.7
+
+    def test_openai_temperature_env_var(self):
+        """Test OPENAI_TEMPERATURE env var."""
+        factory = LLMFactory("openai")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "openai", "OPENAI_TEMPERATURE": "0.5"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.5
+
+    def test_azure_temperature_priority(self):
+        """Test that AZURE_TEMPERATURE is checked before OPENAI_TEMPERATURE."""
+        factory = LLMFactory("azure-openai")
+
+        with patch.dict(os.environ, {
+            "LLM_PROVIDER": "azure-openai",
+            "AZURE_TEMPERATURE": "0.8",
+            "OPENAI_TEMPERATURE": "0.5"
+        }):
+            temp = factory._get_default_temperature()
+            assert temp == 0.8  # Azure takes precedence
+
+    def test_anthropic_temperature_env_var(self):
+        """Test ANTHROPIC_TEMPERATURE env var."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "anthropic-claude", "ANTHROPIC_TEMPERATURE": "0.9"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.9
+
+    def test_google_temperature_env_var(self):
+        """Test GOOGLE_TEMPERATURE env var for both google and gemini providers."""
+        factory_google = LLMFactory("google-gemini")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "google-gemini", "GOOGLE_TEMPERATURE": "0.6"}):
+            temp = factory_google._get_default_temperature()
+            assert temp == 0.6
+
+    def test_vertexai_temperature_env_var(self):
+        """Test VERTEXAI_TEMPERATURE env var."""
+        factory = LLMFactory("gcp-vertexai")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "gcp-vertexai", "VERTEXAI_TEMPERATURE": "0.4"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.4
+
+    def test_temperature_with_comment(self):
+        """Test temperature parsing with inline comments."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "anthropic-claude", "ANTHROPIC_TEMPERATURE": "0.7  # optimized"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.7
+
+    def test_invalid_temperature_uses_default(self):
+        """Test that invalid temperature values fall back to default."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "anthropic-claude", "ANTHROPIC_TEMPERATURE": "invalid"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.0
+
+    def test_temperature_below_range(self):
+        """Test that temperatures below 0.0 are clamped."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "anthropic-claude", "ANTHROPIC_TEMPERATURE": "-0.5"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.0
+
+    def test_temperature_above_range(self):
+        """Test that temperatures above 2.0 are clamped."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "anthropic-claude", "ANTHROPIC_TEMPERATURE": "3.0"}):
+            temp = factory._get_default_temperature()
+            assert temp == 2.0
+
+    def test_get_llm_uses_env_temperature(self):
+        """Test that get_llm() uses environment temperature when not explicitly provided."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {
+            "ANTHROPIC_API_KEY": "test-key",
+            "ANTHROPIC_MODEL_NAME": "claude-3-sonnet-20240229-v1",
+            "LLM_PROVIDER": "anthropic-claude",
+            "ANTHROPIC_TEMPERATURE": "0.8"
+        }):
+            # Mock the builder to verify temperature is passed
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm()
+                # Verify temperature was read from env and passed to builder
+                mock_builder.assert_called_once_with(None, 0.8)
+
+    def test_get_llm_explicit_temperature_overrides_env(self):
+        """Test that explicit temperature parameter overrides environment variable."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {
+            "ANTHROPIC_API_KEY": "test-key",
+            "ANTHROPIC_MODEL_NAME": "claude-3-sonnet-20240229-v1",
+            "LLM_PROVIDER": "anthropic-claude",
+            "ANTHROPIC_TEMPERATURE": "0.8"
+        }):
+            # Mock the builder to verify explicit temperature is used
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm(temperature=0.5)
+                # Verify explicit temperature was used, not env var
+                mock_builder.assert_called_once_with(None, 0.5)
+
+    def test_temperature_with_direct_init_no_env_var(self):
+        """Test temperature when factory initialized directly without LLM_PROVIDER env."""
+        factory = LLMFactory("aws-bedrock")
+
+        # Ensure LLM_PROVIDER is not set, but provider-specific var is
+        with patch.dict(os.environ, {"BEDROCK_TEMPERATURE": "0.9"}, clear=True):
+            temp = factory._get_default_temperature()
+            assert temp == 0.9  # Should read BEDROCK_TEMPERATURE using self.provider
+
+    def test_explicit_temperature_validation(self):
+        """Test that explicit temperature values are validated and clamped."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {
+            "ANTHROPIC_API_KEY": "test-key",
+            "ANTHROPIC_MODEL_NAME": "claude-3-sonnet-20240229-v1"
+        }):
+            # Test temperature below range
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm(temperature=-0.5)
+                mock_builder.assert_called_once_with(None, 0.0)  # Clamped to 0.0
+
+            # Test temperature above range
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm(temperature=3.0)
+                mock_builder.assert_called_once_with(None, 2.0)  # Clamped to 2.0
+
+            # Test invalid temperature
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm(temperature="invalid")
+                mock_builder.assert_called_once_with(None, 0.0)  # Falls back to 0.0
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
