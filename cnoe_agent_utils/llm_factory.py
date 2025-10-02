@@ -173,30 +173,33 @@ class LLMFactory:
     OPENAI_TEMPERATURE) with proper ordering to handle Azure before OpenAI.
 
     Returns:
-        float: Temperature value between 0.0 and 2.0, defaulting to 0.3
-               (optimized for tool-calling agents)
+        float: Temperature value between 0.0 and 2.0, defaulting to 0.0
+               (preserves backward compatibility with original behavior)
     """
-    provider = os.getenv("LLM_PROVIDER", "").lower()
-    temperature = 0.3  # Default temperature for tool-calling agents
+    provider = self.provider  # Use instance provider (already normalized with underscores)
+    temperature = 0.0  # Default temperature (preserves backward compatibility)
 
     # Provider to environment variable mapping (order matters for substring matching)
+    # Note: Overlapping keys (aws/bedrock, google/gemini) provide fallback coverage
     provider_temp_vars = {
         "azure": "AZURE_TEMPERATURE",  # Check Azure before OpenAI
         "openai": "OPENAI_TEMPERATURE",
         "anthropic": "ANTHROPIC_TEMPERATURE",
-        "bedrock": "BEDROCK_TEMPERATURE",
-        "aws": "BEDROCK_TEMPERATURE",
-        "google": "GOOGLE_TEMPERATURE",
-        "gemini": "GOOGLE_TEMPERATURE",
+        "bedrock": "BEDROCK_TEMPERATURE",  # Matches aws_bedrock
+        "aws": "BEDROCK_TEMPERATURE",      # Additional fallback
+        "google": "GOOGLE_TEMPERATURE",    # Matches google_gemini
+        "gemini": "GOOGLE_TEMPERATURE",    # Additional fallback
         "vertex": "VERTEXAI_TEMPERATURE",
     }
 
-    # Find matching provider and get temperature
-    temp_str = "0.3"
+    # Find matching provider-specific environment variable
+    env_var_to_check = None
     for provider_keyword, env_var in provider_temp_vars.items():
         if provider_keyword in provider:
-            temp_str = os.getenv(env_var, "0.3")
+            env_var_to_check = env_var
             break
+
+    temp_str = os.getenv(env_var_to_check, "0.0") if env_var_to_check else "0.0"
 
     # Safe parsing with validation
     # Strip comments if present (handle inline comments like "1  # comment")
@@ -213,8 +216,8 @@ class LLMFactory:
             logging.warning(f"Temperature {temperature} above 2.0, using 2.0")
             temperature = 2.0
     except (ValueError, TypeError):
-        logging.warning(f"Invalid temperature value '{temp_str}', using default 0.3")
-        temperature = 0.3
+        logging.warning(f"Invalid temperature value '{temp_str}', using default 0.0")
+        temperature = 0.0
 
     logging.debug(f"Using temperature {temperature} for provider '{provider}'")
     return temperature
@@ -235,10 +238,24 @@ class LLMFactory:
 
     If temperature is not specified, it will be read from provider-specific
     environment variables (e.g., BEDROCK_TEMPERATURE, OPENAI_TEMPERATURE).
+    Temperature values are validated and clamped to the range 0.0-2.0.
     """
     # Use environment variable if temperature not explicitly provided
     if temperature is None:
         temperature = self._get_default_temperature()
+    else:
+        # Validate and clamp explicit temperature values
+        try:
+            temperature = float(temperature)
+            if temperature < 0.0:
+                logging.warning(f"Temperature {temperature} below 0.0, clamping to 0.0")
+                temperature = 0.0
+            elif temperature > 2.0:
+                logging.warning(f"Temperature {temperature} above 2.0, clamping to 2.0")
+                temperature = 2.0
+        except (ValueError, TypeError):
+            logging.warning(f"Invalid explicit temperature '{temperature}', using default 0.0")
+            temperature = 0.0
 
     builder = getattr(self, f"_build_{self.provider}_llm")
     llm = builder(response_format, temperature, **kwargs)

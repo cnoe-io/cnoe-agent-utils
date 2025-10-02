@@ -296,7 +296,7 @@ class TestLLMFactoryTemperature:
 
         with patch.dict(os.environ, {}, clear=True):
             temp = factory._get_default_temperature()
-            assert temp == 0.3  # Default for tool-calling agents
+            assert temp == 0.0  # Default preserves backward compatibility
 
     def test_bedrock_temperature_env_var(self):
         """Test BEDROCK_TEMPERATURE env var."""
@@ -364,7 +364,7 @@ class TestLLMFactoryTemperature:
 
         with patch.dict(os.environ, {"LLM_PROVIDER": "anthropic-claude", "ANTHROPIC_TEMPERATURE": "invalid"}):
             temp = factory._get_default_temperature()
-            assert temp == 0.3
+            assert temp == 0.0
 
     def test_temperature_below_range(self):
         """Test that temperatures below 0.0 are clamped."""
@@ -415,6 +415,41 @@ class TestLLMFactoryTemperature:
                 factory.get_llm(temperature=0.5)
                 # Verify explicit temperature was used, not env var
                 mock_builder.assert_called_once_with(None, 0.5)
+
+    def test_temperature_with_direct_init_no_env_var(self):
+        """Test temperature when factory initialized directly without LLM_PROVIDER env."""
+        factory = LLMFactory("aws-bedrock")
+
+        # Ensure LLM_PROVIDER is not set, but provider-specific var is
+        with patch.dict(os.environ, {"BEDROCK_TEMPERATURE": "0.9"}, clear=True):
+            temp = factory._get_default_temperature()
+            assert temp == 0.9  # Should read BEDROCK_TEMPERATURE using self.provider
+
+    def test_explicit_temperature_validation(self):
+        """Test that explicit temperature values are validated and clamped."""
+        factory = LLMFactory("anthropic-claude")
+
+        with patch.dict(os.environ, {
+            "ANTHROPIC_API_KEY": "test-key",
+            "ANTHROPIC_MODEL_NAME": "claude-3-sonnet-20240229-v1"
+        }):
+            # Test temperature below range
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm(temperature=-0.5)
+                mock_builder.assert_called_once_with(None, 0.0)  # Clamped to 0.0
+
+            # Test temperature above range
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm(temperature=3.0)
+                mock_builder.assert_called_once_with(None, 2.0)  # Clamped to 2.0
+
+            # Test invalid temperature
+            with patch.object(factory, '_build_anthropic_claude_llm') as mock_builder:
+                mock_builder.return_value = "mock_llm"
+                factory.get_llm(temperature="invalid")
+                mock_builder.assert_called_once_with(None, 0.0)  # Falls back to 0.0
 
 
 if __name__ == "__main__":
