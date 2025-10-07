@@ -1,3 +1,30 @@
+## 0.3.3 (Unreleased)
+
+### Feat
+
+- **llm_factory**: add extended thinking support for AWS Bedrock, Anthropic, and Vertex AI Claude 4+ models
+  - New environment variables: `AWS_BEDROCK_THINKING_ENABLED`, `AWS_BEDROCK_THINKING_BUDGET`
+  - New environment variables: `ANTHROPIC_THINKING_ENABLED`, `ANTHROPIC_THINKING_BUDGET`
+  - New environment variables: `VERTEXAI_THINKING_ENABLED`, `VERTEXAI_THINKING_BUDGET`
+  - Default thinking budget: 1024 tokens (minimum required), maximum: max_tokens if provided
+  - Automatic validation and clamping to max_tokens when provided
+
+### Refactor
+
+- **llm_factory**: extract duplicate thinking configuration logic into `_parse_thinking_budget()` helper
+- **llm_factory**: add `ThinkingConfig` TypedDict for type safety
+- **llm_factory**: define constants `THINKING_DEFAULT_BUDGET` and `THINKING_MIN_BUDGET`
+
+### Fix
+
+- **llm_factory**: fix `max_tokens` validation bug in thinking configuration
+- **llm_factory**: automatically reset temperature to 0 and remove top_p/top_k parameters when extended thinking is enabled (thinking is incompatible with these parameters)
+- **llm_factory**: fix `model_kwargs` clobbering bug in AWS Bedrock builder - merge `response_format` into existing kwargs instead of replacing, preserving extended thinking configuration
+
+### Tests
+
+- **test_extended_thinking**: add comprehensive test suite with 45 tests covering all aspects of extended thinking including parameter compatibility and model_kwargs preservation
+
 ## 0.3.2 (2025-10-02)
 
 ### Fix

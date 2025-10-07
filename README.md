@@ -136,6 +136,10 @@ Set the following environment variables:
 ```bash
 export ANTHROPIC_API_KEY=<your_anthropic_api_key>
 export ANTHROPIC_MODEL_NAME=<model_name>
+
+# Optional: Enable extended thinking for Claude 4+ models
+export ANTHROPIC_THINKING_ENABLED=true
+export ANTHROPIC_THINKING_BUDGET=1024  # Default: 1024, Min: 1024
 ```
 
 Run the example:
@@ -155,6 +159,10 @@ export AWS_PROFILE=<your_aws_profile>
 export AWS_REGION=<your_aws_region>
 export AWS_BEDROCK_MODEL_ID="us.anthropic.claude-3-7-sonnet-20250219-v1:0"
 export AWS_BEDROCK_PROVIDER="anthropic"
+
+# Optional: Enable extended thinking for Claude 4+ models
+export AWS_BEDROCK_THINKING_ENABLED=true
+export AWS_BEDROCK_THINKING_BUDGET=1024  # Default: 1024, Min: 1024
 ```
 
 Run the example:
@@ -315,6 +323,10 @@ Set the following environment variables:
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcp.json
 export VERTEXAI_MODEL_NAME="gemini-2.0-flash-001"
+
+# Optional: Enable extended thinking for Claude 4+ models on Vertex AI
+export VERTEXAI_THINKING_ENABLED=true
+export VERTEXAI_THINKING_BUDGET=1024  # Default: 1024, Min: 1024
 ```
 
 Run the example:
