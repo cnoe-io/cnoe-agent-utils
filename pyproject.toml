@@ -1,6 +1,6 @@
 [project]
 name = "cnoe-agent-utils"
-version = "0.3.2"
+version = "0.3.3"
 description = "Core utilities for CNOE agents including LLM factory and tracing"
 authors = [
     {name = "CNOE Contributors", email = "cnoe-steering@googlegroups.com"}
