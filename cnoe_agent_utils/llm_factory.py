@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import json
 import os
-from typing import Any, Iterable, Optional, Dict
+from typing import Any, Iterable, Optional, Dict, Literal, TypedDict
 import dotenv
 
 
@@ -66,6 +66,50 @@ def _as_bool(v: Optional[str], default: bool=False) -> bool:
     if vv in _FALSE:
         return False
     return default
+
+# Extended thinking configuration constants
+THINKING_DEFAULT_BUDGET = 1024
+THINKING_MIN_BUDGET = 1024
+
+# TypedDict for extended thinking configuration
+class ThinkingConfig(TypedDict):
+    """Configuration for extended thinking models."""
+    type: Literal["enabled"]
+    budget_tokens: int
+
+def _parse_thinking_budget(env_var: str, max_tokens: Optional[int] = None) -> int:
+    """Parse and validate thinking budget from environment variable.
+
+    Args:
+        env_var: Name of the environment variable to read
+        max_tokens: Optional maximum tokens limit to clamp budget to
+
+    Returns:
+        Validated thinking budget in tokens
+    """
+    budget_str = os.getenv(env_var, str(THINKING_DEFAULT_BUDGET))
+
+    # Handle comments like temperature parsing does
+    if "#" in budget_str:
+        budget_str = budget_str.split("#")[0].strip()
+
+    try:
+        thinking_budget = int(budget_str)
+    except (ValueError, TypeError):
+        logging.warning(f"[LLM] Invalid {env_var}='{budget_str}', using {THINKING_DEFAULT_BUDGET}")
+        thinking_budget = THINKING_DEFAULT_BUDGET
+
+    # Validate thinking_budget (minimum tokens)
+    if thinking_budget < THINKING_MIN_BUDGET:
+        logging.warning(f"[LLM] {env_var}={thinking_budget} is below minimum {THINKING_MIN_BUDGET}, using {THINKING_MIN_BUDGET}")
+        thinking_budget = THINKING_MIN_BUDGET
+
+    # Validate upper bound if max_tokens is provided
+    if max_tokens and thinking_budget > max_tokens:
+        logging.warning(f"[LLM] Thinking budget {thinking_budget} exceeds max_tokens {max_tokens}; clamping to {max_tokens}")
+        thinking_budget = max_tokens
+
+    return thinking_budget
 
 class LLMFactory:
   """Factory that returns a *ready‑to‑use* LangChain chat model.
@@ -318,6 +362,9 @@ class LLMFactory:
       raise EnvironmentError(
         f"Missing the following AWS Bedrock environment variable(s): {', '.join(missing_vars)}."
       )
+    # Check for extended thinking configuration
+    thinking_enabled = _as_bool(os.getenv("AWS_BEDROCK_THINKING_ENABLED"), False)
+
     # Check for prompt caching configuration
     enable_cache = _as_bool(os.getenv("AWS_BEDROCK_ENABLE_PROMPT_CACHE"), False)
 
@@ -334,6 +381,41 @@ class LLMFactory:
       **kwargs,
     }
 
+    # Handle extended thinking configuration for AWS Bedrock
+    if thinking_enabled:
+      logging.info("[LLM] Extended thinking enabled for AWS Bedrock")
+
+      # Create model_kwargs dict if it doesn't exist
+      model_kwargs = common_args.get("model_kwargs", {})
+
+      # Remove incompatible parameters when using extended thinking
+      incompatible_params = []
+      if "temperature" in common_args and common_args["temperature"] != 0:
+        del common_args["temperature"]
+        incompatible_params.append("temperature")
+      if "top_p" in kwargs:
+        kwargs.pop("top_p")
+        incompatible_params.append("top_p")
+      if "top_k" in kwargs:
+        kwargs.pop("top_k")
+        incompatible_params.append("top_k")
+
+      if incompatible_params:
+        logging.warning(
+          f"[LLM] Extended thinking is not compatible with: {', '.join(incompatible_params)}. These parameters have been removed."
+        )
+
+      max_tokens_limit = kwargs.get("max_tokens")
+      thinking_budget = _parse_thinking_budget("AWS_BEDROCK_THINKING_BUDGET", max_tokens_limit)
+
+      thinking_config: ThinkingConfig = {"type": "enabled", "budget_tokens": thinking_budget}
+      model_kwargs["thinking"] = thinking_config
+      logging.info(f"[LLM] Extended thinking enabled with budget_tokens={thinking_budget}")
+      logging.info("[LLM] Note: Extended thinking is not compatible with temperature, top_p, top_k, or forced tool use")
+
+      # Update common_args with the model_kwargs
+      common_args["model_kwargs"] = model_kwargs
+
     # Add optional parameters only if they have values
     if aws_access_key_id:
       common_args["aws_access_key_id"] = aws_access_key_id
@@ -346,9 +428,11 @@ class LLMFactory:
     if provider:
       common_args["provider"] = provider
 
-    # Add model_kwargs only if not empty (prevents circular reference issues)
+    # Merge response_format into existing model_kwargs (preserves thinking config)
     if response_format:
-      common_args["model_kwargs"] = {"response_format": response_format}
+      model_kwargs = common_args.get("model_kwargs", {})
+      model_kwargs["response_format"] = response_format
+      common_args["model_kwargs"] = model_kwargs
 
     # Use ChatBedrockConverse when caching is enabled (native prompt caching support)
     # Otherwise use ChatBedrock (legacy)
@@ -393,6 +477,17 @@ class LLMFactory:
     logging.info(f"[LLM] Anthropic model={model_name}")
 
     model_kwargs = {"response_format": response_format} if response_format else {}
+
+    # Check for extended thinking configuration (Claude 4+ models)
+    thinking_enabled = _as_bool(os.getenv("ANTHROPIC_THINKING_ENABLED"), False)
+    if thinking_enabled:
+      logging.info("[LLM] Extended thinking enabled for Anthropic")
+
+      max_tokens_limit = kwargs.get("max_tokens")
+      thinking_budget = _parse_thinking_budget("ANTHROPIC_THINKING_BUDGET", max_tokens_limit)
+      model_kwargs["thinking_budget"] = thinking_budget
+      logging.info(f"[LLM] Extended thinking configured with thinking_budget={thinking_budget}")
+
     return ChatAnthropic(
       model_name=model_name,
       anthropic_api_key=api_key,
@@ -644,15 +739,37 @@ class LLMFactory:
     logging.info(f"[LLM] Google VertexAI model={model_name} project={project_id} location={location}")
 
     model_kwargs = {"response_format": response_format} if response_format else {}
-    return ChatVertexAI(
-      model=model_name,
-      project=project_id,
-      location=location,
-      credentials=credentials,
-      temperature=temperature if temperature is not None else 0,
-      max_tokens=None,
-      max_retries=6,
-      stop=None,
-      model_kwargs=model_kwargs,
-      **kwargs,
-    )
+
+    # Check for extended thinking configuration (Claude 4+ models on Vertex AI)
+    thinking_enabled = _as_bool(os.getenv("VERTEXAI_THINKING_ENABLED"), False)
+    thinking_budget = None
+    if thinking_enabled:
+      logging.info("[LLM] Extended thinking enabled for Vertex AI")
+
+      max_tokens_limit = kwargs.get("max_tokens")
+      thinking_budget = _parse_thinking_budget("VERTEXAI_THINKING_BUDGET", max_tokens_limit)
+      logging.info(f"[LLM] Extended thinking configured with thinking_budget={thinking_budget}")
+
+    # Build ChatVertexAI args - don't pass max_tokens as both explicit param and in kwargs
+    vertexai_args = {
+      "model": model_name,
+      "project": project_id,
+      "location": location,
+      "credentials": credentials,
+      "temperature": temperature if temperature is not None else 0,
+      "max_retries": 6,
+      "stop": None,
+      "model_kwargs": model_kwargs,
+    }
+
+    # Add thinking_budget as explicit parameter (not in model_kwargs to avoid warning)
+    if thinking_budget is not None:
+      vertexai_args["thinking_budget"] = thinking_budget
+
+    # Add kwargs except max_tokens which we set explicitly
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k != "max_tokens"}
+    max_tokens_value = kwargs.get("max_tokens")
+    if max_tokens_value is not None:
+      vertexai_args["max_tokens"] = max_tokens_value
+
+    return ChatVertexAI(**vertexai_args, **filtered_kwargs)
