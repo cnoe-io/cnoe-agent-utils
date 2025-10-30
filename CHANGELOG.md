@@ -1,4 +1,8 @@
-## 0.3.4 (2025-10-30)
+## Unreleased
+
+### Fix
+
+- OpenAI default_headers config option
 
 ## 0.3.3 (2025-10-07)
 
