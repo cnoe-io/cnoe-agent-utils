@@ -48,6 +48,13 @@ except ImportError:
     AzureChatOpenAI = None
     ChatOpenAI = None
 
+try:
+    from langchain_groq import ChatGroq
+    _LANGCHAIN_GROQ_AVAILABLE = True
+except ImportError:
+    _LANGCHAIN_GROQ_AVAILABLE = False
+    ChatGroq = None
+
 logging.basicConfig(
   level=logging.INFO,
   format="%(asctime)s %(levelname)s [llm_factory] %(message)s",
@@ -153,6 +160,9 @@ class LLMFactory:
     if _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE:
         providers.add("gcp-vertexai")
 
+    if _LANGCHAIN_GROQ_AVAILABLE:
+        providers.add("groq")
+
     return providers
 
   @classmethod
@@ -175,6 +185,8 @@ class LLMFactory:
         return ["langchain-google-genai"]
     elif provider == "gcp-vertexai" and not _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE:
         return ["langchain-google-vertexai"]
+    elif provider == "groq" and not _LANGCHAIN_GROQ_AVAILABLE:
+        return ["langchain-groq"]
     else:
         return []
 
@@ -234,6 +246,7 @@ class LLMFactory:
         "google": "GOOGLE_TEMPERATURE",    # Matches google_gemini
         "gemini": "GOOGLE_TEMPERATURE",    # Additional fallback
         "vertex": "VERTEXAI_TEMPERATURE",
+        "groq": "GROQ_TEMPERATURE",
     }
 
     # Find matching provider-specific environment variable
@@ -571,6 +584,58 @@ class LLMFactory:
         **kwargs_to_pass,
         **kwargs,
       )
+
+  def _build_groq_llm(
+    self,
+    response_format: str | dict | None,
+    temperature: float | None,
+    **kwargs,
+  ):
+    if not _LANGCHAIN_GROQ_AVAILABLE:
+      raise ImportError(
+        "Groq support requires langchain-groq. "
+        "Install with: pip install 'cnoe-agent-utils[groq]'"
+      )
+    api_key = os.getenv("GROQ_API_KEY")
+    model_name = os.getenv("GROQ_MODEL_NAME")
+
+    # Validate required environment variables
+    missing_vars = []
+    if not api_key:
+      missing_vars.append("GROQ_API_KEY")
+    if not model_name:
+      missing_vars.append("GROQ_MODEL_NAME")
+    if missing_vars:
+      raise EnvironmentError(
+        f"Missing the following Groq environment variable(s): {', '.join(missing_vars)}."
+      )
+
+    missing_vars = []
+    if not api_key:
+      missing_vars.append("GROQ_API_KEY")
+    if not model_name:
+      missing_vars.append("GROQ_MODEL_NAME")
+    if missing_vars:
+      raise EnvironmentError(
+        f"Missing the following Groq environment variable(s): {', '.join(missing_vars)}."
+      )
+
+    logging.info(f"[LLM] Groq model={model_name}")
+
+    # Configure streaming based on global and provider-specific settings
+    streaming = _as_bool(os.getenv("GROQ_STREAMING",
+                                os.getenv("LLM_STREAMING", "true")), True)
+
+    model_kwargs = {"response_format": response_format} if response_format else {}
+
+    return ChatGroq(
+      model_name=model_name,
+      groq_api_key=api_key,
+      temperature=temperature if temperature is not None else 0,
+      streaming=streaming,
+      model_kwargs=model_kwargs,
+      **kwargs,
+    )
 
   def _build_openai_llm(
     self,
