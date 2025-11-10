@@ -7,27 +7,15 @@ import logging
 from abc import ABC
 from typing_extensions import override
 
-try:
-    from a2a.server.agent_execution import AgentExecutor, RequestContext
-    from a2a.server.events.event_queue import EventQueue
-    from a2a.types import (
-        TaskArtifactUpdateEvent,
-        TaskState,
-        TaskStatus,
-        TaskStatusUpdateEvent,
-    )
-    from a2a.utils import new_agent_text_message, new_task, new_text_artifact
-    A2A_AVAILABLE = True
-except ImportError:
-    # A2A dependencies not available - create placeholder classes
-    A2A_AVAILABLE = False
-    class AgentExecutor:
-        pass
-    class RequestContext:
-        pass
-    class EventQueue:
-        pass
-
+from a2a.server.agent_execution import AgentExecutor, RequestContext
+from a2a.server.events.event_queue import EventQueue
+from a2a.types import (
+    TaskArtifactUpdateEvent,
+    TaskState,
+    TaskStatus,
+    TaskStatusUpdateEvent,
+)
+from a2a.utils import new_agent_text_message, new_task, new_text_artifact
 from cnoe_agent_utils.tracing import extract_trace_id_from_context
 
 from .base_langgraph_agent import BaseLangGraphAgent
@@ -45,8 +33,6 @@ class BaseLangGraphAgentExecutor(AgentExecutor, ABC):
     Subclasses only need to:
     1. Initialize with their specific agent instance
     2. Optionally override execute() for custom behavior
-
-    Note: Requires A2A dependencies to be installed for full functionality.
     """
 
     def __init__(self, agent: BaseLangGraphAgent):
@@ -55,15 +41,7 @@ class BaseLangGraphAgentExecutor(AgentExecutor, ABC):
 
         Args:
             agent: Instance of a BaseLangGraphAgent subclass
-
-        Raises:
-            ImportError: If A2A dependencies are not available
         """
-        if not A2A_AVAILABLE:
-            raise ImportError(
-                "A2A dependencies not available. Install them to use BaseLangGraphAgentExecutor:\n"
-                "pip install a2a-sdk"
-            )
         self.agent = agent
 
     @override
@@ -85,9 +63,6 @@ class BaseLangGraphAgentExecutor(AgentExecutor, ABC):
             context: Request context with user input and current task
             event_queue: Queue for sending status/artifact update events
         """
-        if not A2A_AVAILABLE:
-            raise RuntimeError("A2A dependencies not available")
-
         query = context.get_user_input()
         task = context.current_task
         agent_name = self.agent.get_agent_name()
@@ -337,3 +312,4 @@ class BaseLangGraphAgentExecutor(AgentExecutor, ABC):
         Override if cancellation support is needed.
         """
         raise Exception('cancel not supported')
+
