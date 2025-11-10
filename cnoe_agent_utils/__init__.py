@@ -10,11 +10,11 @@ from .utils import Spinner, stream_with_spinner, invoke_with_spinner, time_llm_o
 try:
     from .agents import (
         # Context configuration (always available)
-        get_context_limit_for_provider,
-        get_min_messages_to_keep,
-        is_auto_compression_enabled,
-        get_context_config,
-        log_context_config,
+        get_context_limit_for_provider, # noqa: F401
+        get_min_messages_to_keep, # noqa: F401
+        is_auto_compression_enabled, # noqa: F401
+        get_context_config, # noqa: F401
+        log_context_config, # noqa: F401
     )
     _AGENTS_BASE_AVAILABLE = True
 except ImportError:
@@ -22,14 +22,14 @@ except ImportError:
 
 # Try to import LangGraph agent classes
 try:
-    from .agents import BaseLangGraphAgent, BaseLangGraphAgentExecutor
+    from .agents import BaseLangGraphAgent, BaseLangGraphAgentExecutor # noqa: F401
     _LANGGRAPH_AGENTS_AVAILABLE = True
 except ImportError:
     _LANGGRAPH_AGENTS_AVAILABLE = False
 
 # Try to import Strands agent classes
 try:
-    from .agents import BaseStrandsAgent, BaseStrandsAgentExecutor
+    from .agents import BaseStrandsAgent, BaseStrandsAgentExecutor # noqa: F401
     _STRANDS_AGENTS_AVAILABLE = True
 except ImportError:
     _STRANDS_AGENTS_AVAILABLE = False

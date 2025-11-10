@@ -335,7 +335,7 @@ class BaseStrandsAgent(ABC):
             # Some Model classes (like BedrockModel) are passed as first positional arg
             # Others use model= keyword argument
             try:
-                from strands.models import BedrockModel
+                from strands.models import BedrockModel # noqa: F401
                 bedrock_available = True
             except ImportError:
                 bedrock_available = False

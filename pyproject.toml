@@ -122,9 +122,11 @@ agents-all = [
     "langchain-mcp-adapters>=0.1.0",
     "strands>=0.1.0",
     "a2a-sdk>=0.1.0",
+]
+
 # Groq dependencies
 groq = [
-    "langchain-groq>=0.1.0",
+    "langchain-groq>=0.1.0"
 ]
 
 
