@@ -246,6 +246,15 @@ class TestLLMFactoryErrorMessages:
             with pytest.raises(ImportError, match="pip install 'cnoe-agent-utils\\[gcp\\]'"):
                 factory._build_gcp_vertexai_llm(None, None)
 
+    def test_groq_import_error_message(self):
+        """Test that Groq import error includes helpful message."""
+        factory = LLMFactory("groq")
+
+        # Mock the availability check to simulate missing dependency
+        with patch('cnoe_agent_utils.llm_factory._LANGCHAIN_GROQ_AVAILABLE', False):
+            with pytest.raises(ImportError, match="pip install 'cnoe-agent-utils\\[groq\\]'"):
+                factory._build_groq_llm(None, None)
+                factory._build_gcp_vertexai_llm(None, None)
 
 class TestLLMFactoryIntegration:
     """Integration tests for the LLM factory."""
@@ -341,6 +350,14 @@ class TestLLMFactoryTemperature:
         with patch.dict(os.environ, {"LLM_PROVIDER": "google-gemini", "GOOGLE_TEMPERATURE": "0.6"}):
             temp = factory_google._get_default_temperature()
             assert temp == 0.6
+
+    def test_groq_temperature_env_var(self):
+        """Test GROQ_TEMPERATURE env var."""
+        factory = LLMFactory("groq")
+
+        with patch.dict(os.environ, {"LLM_PROVIDER": "groq", "GROQ_TEMPERATURE": "0.5"}):
+            temp = factory._get_default_temperature()
+            assert temp == 0.5
 
     def test_vertexai_temperature_env_var(self):
         """Test VERTEXAI_TEMPERATURE env var."""

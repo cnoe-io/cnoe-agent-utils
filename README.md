@@ -28,6 +28,7 @@
     - 🤖 Google Gemini
     - 🤖 Anthropic Claude
     - 🤖 OpenAI
+    - 🤖 Groq
 * Simple, environment-variable-driven configuration.
 * Example scripts for each LLM provider with setup instructions.
 
@@ -103,6 +104,9 @@ pip install "cnoe-agent-utils[aws]"
 # Google Cloud support (Vertex AI, Gemini) only
 pip install "cnoe-agent-utils[gcp]"
 
+# Groq support only
+pip install "cnoe-agent-utils[groq]"
+
 # Advanced tracing and observability (Langfuse, OpenTelemetry) only
 pip install "cnoe-agent-utils[tracing]"
 
@@ -135,6 +139,7 @@ uv add "cnoe-agent-utils[anthropic]"
 uv add "cnoe-agent-utils[openai]"
 uv add "cnoe-agent-utils[azure]"
 uv add "cnoe-agent-utils[aws]"
+uv add "cnoe-agent-utils[groq]"
 uv add "cnoe-agent-utils[gcp]"
 uv add "cnoe-agent-utils[tracing]"
 uv add "cnoe-agent-utils[agents]"
@@ -202,6 +207,22 @@ Run the example:
 ```bash
 uv run examples/test_aws_bedrock_claude.py
 ```
+
+### 🤖 Groq
+
+Set the following environment variable:
+## Groq Configuration
+GROQ_API_KEY=<your API Key>
+GROQ_MODEL_NAME=<model name>
+GROQ_TEMPERATURE=<Your value>
+
+
+Run the example:
+
+```bash
+uv run examples/groq_stream.py
+```
+
 
 #### AWS Bedrock Prompt Caching
 

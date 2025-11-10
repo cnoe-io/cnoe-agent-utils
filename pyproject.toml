@@ -1,6 +1,6 @@
 [project]
 name = "cnoe-agent-utils"
-version = "0.4.0"
+version = "0.3.5"
 description = "Core utilities for CNOE agents including LLM factory, tracing, and base agent classes"
 authors = [
     {name = "CNOE Contributors", email = "cnoe-steering@googlegroups.com"}
@@ -23,6 +23,7 @@ dependencies = [
     "langchain-aws>=0.3.0",
     "langchain-google-genai>=2.1.5",
     "langchain-google-vertexai>=3.0.1",
+    "langchain-groq>=0.1.0", # Groq integration
     "boto3>=1.34.0",
     "botocore>=1.34.0",
     "langfuse>=3.0.0,<4.0.0",
@@ -121,6 +122,9 @@ agents-all = [
     "langchain-mcp-adapters>=0.1.0",
     "strands>=0.1.0",
     "a2a-sdk>=0.1.0",
+# Groq dependencies
+groq = [
+    "langchain-groq>=0.1.0",
 ]
 
 
