@@ -14,6 +14,7 @@
 * **Reusable utilities and abstractions** for building agent-based (LLM-powered) systems.
 * **Centralized LLM Factory** supporting major providers (AWS, Azure, GCP, OpenAI, Gemini, Anthropic).
 * **Centralized Tracing Utilities** (since v0.2.0) to eliminate duplicated tracing code across CNOE agents.
+* **Agent Base Classes** (since v0.4.0) for LangGraph and Strands agent frameworks with A2A protocol support.
 
 ## Key Features
 
@@ -38,9 +39,20 @@
 * **A2A Tracing Disabling:** Single method to monkey-patch/disable agent-to-agent tracing everywhere.
 * **Graceful fallback:** Works with or without Langfuse; tracing is zero-overhead when disabled.
 
+### **Agent Base Classes (since v0.4.0)**
+
+* **Multi-Framework Support:** Base classes for LangGraph and Strands agent frameworks
+* **A2A Protocol Integration:** Seamless integration with Agent-to-Agent protocol for distributed agent systems
+* **Context Management:** Automatic context window management with token counting and intelligent message trimming
+* **Streaming Support:** Built-in streaming capabilities for real-time agent responses with tool notifications
+* **Optional Dependencies:** Graceful handling of missing dependencies - install only what you need
+* **MCP Integration:** Built-in support for Model Context Protocol (MCP) with multi-server configurations
+
 ---
 
-**Note:** Checkout this tutorial on [Tracing](TRACING.md)
+**Note:**
+- Checkout this tutorial on [Tracing](TRACING.md)
+- See [Agent Base Classes Documentation](cnoe_agent_utils/agents/README.md) for detailed agent utilities guide
 
 ## 🚀 LLM Factory Getting Started
 
@@ -94,6 +106,21 @@ pip install "cnoe-agent-utils[gcp]"
 # Advanced tracing and observability (Langfuse, OpenTelemetry) only
 pip install "cnoe-agent-utils[tracing]"
 
+# Agent base classes and utilities only
+pip install "cnoe-agent-utils[agents]"
+
+# LangGraph agent framework support
+pip install "cnoe-agent-utils[langgraph]"
+
+# Strands agent framework support
+pip install "cnoe-agent-utils[strands]"
+
+# A2A protocol support for agent executors
+pip install "cnoe-agent-utils[a2a]"
+
+# Complete agent stack (all agent frameworks)
+pip install "cnoe-agent-utils[agents-all]"
+
 # Development dependencies (testing, linting, etc.)
 pip install "cnoe-agent-utils[dev]"
 ```
@@ -110,6 +137,11 @@ uv add "cnoe-agent-utils[azure]"
 uv add "cnoe-agent-utils[aws]"
 uv add "cnoe-agent-utils[gcp]"
 uv add "cnoe-agent-utils[tracing]"
+uv add "cnoe-agent-utils[agents]"
+uv add "cnoe-agent-utils[langgraph]"
+uv add "cnoe-agent-utils[strands]"
+uv add "cnoe-agent-utils[a2a]"
+uv add "cnoe-agent-utils[agents-all]"
 ```
 
 #### Local Development
