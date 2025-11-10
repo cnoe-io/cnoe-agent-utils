@@ -93,7 +93,8 @@ class TestLLMFactoryExtendedCoverage:
             "azure-openai",
             "openai",
             "google-gemini",
-            "gcp-vertexai"
+            "gcp-vertexai",
+            "groq"  # hypothetical custom provider
         ]
 
         for provider in valid_providers:
@@ -120,7 +121,8 @@ class TestLLMFactoryExtendedCoverage:
             "azure-openai",
             "openai",
             "google-gemini",
-            "gcp-vertexai"
+            "gcp-vertexai",
+            "groq"
         ]
 
         for provider in providers:
@@ -172,7 +174,8 @@ class TestLLMFactoryExtendedCoverage:
             "azure-openai",
             "openai",
             "google-gemini",
-            "gcp-vertexai"
+            "gcp-vertexai",
+            "groq"
         ]
 
         for provider in valid_providers:
