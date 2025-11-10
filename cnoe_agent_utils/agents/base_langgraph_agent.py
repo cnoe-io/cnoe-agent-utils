@@ -241,14 +241,14 @@ Use this as the reference point for all date calculations. When users say "today
 
         # Write to temp file
         temp_file = tempfile.NamedTemporaryFile(
-            mode='w', delete=False, suffix='.json', encoding='utf-8',
+            mode='w', delete=False, suffix='.json',
             prefix=f'{agent_name}_{tool_name}_'
         )
         temp_file.write(output_str)
         temp_file.close()
 
         # Read first chunk as preview
-        with open(temp_file.name, 'r', encoding='utf-8') as f:
+        with open(temp_file.name, 'r') as f:
             preview = f.read(CHUNK_SIZE)
 
         # Count items if it's structured data
@@ -982,3 +982,6 @@ Use this as the reference point for all date calculations. When users say "today
             'require_user_input': False,
             'content': '',
         }
+
+
+
