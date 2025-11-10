@@ -1,3 +1,9 @@
+## Unreleased
+
+### Feat
+
+- synchronize agent base classes with ai-platform-engineering
+
 ## 0.3.6 (2025-11-10)
 
 ### Feat
