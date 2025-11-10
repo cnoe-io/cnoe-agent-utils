@@ -1,4 +1,8 @@
-## 0.3.5 (2025-10-30)
+## Unreleased
+
+### Feat
+
+- agent base classes (#26)
 
 ### Fix
 
