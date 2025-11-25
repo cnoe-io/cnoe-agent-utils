@@ -392,6 +392,80 @@ This demonstrates how to use the LLM Factory and other utilities provided by the
 
 ---
 
+## 🔧 Middleware
+
+The `cnoe_agent_utils.middleware` module provides a collection of reusable middleware components for LangGraph agents, extending the [DeepAgents library](https://github.com/langchain-ai/deepagents) from LangChain. Middleware allows you to intercept and modify agent behavior at various stages of execution without changing the core agent logic.
+
+> [!NOTE]
+> The middleware listed below extends the default DeepAgents middleware (such as `PlanningMiddleware`, `FilesystemMiddleware`, and `SubAgentMiddleware`) with additional specialized capabilities for advanced agent workflows.
+
+### Extended Middleware
+
+#### **CallToolWithFileArgMiddleware**
+
+Automatically substitutes file paths with their contents when calling non-filesystem tools.
+
+**Features:**
+- Intercepts tool calls after model generation
+- Replaces file path arguments with actual file contents from the in-memory FS
+- Preserves original behavior for filesystem-specific tools
+- Generates acknowledgment messages for transformed calls
+
+**How it works:**
+1. Agent calls a tool with a file path as an argument
+2. Middleware detects the file path and replaces it with file contents
+3. Creates a `ToolMessage` acknowledging the original call
+4. Emits a rewritten `AIMessage` with the actual tool call using file contents
+
+**Usage:**
+```python
+from cnoe_agent_utils.middleware import CallToolWithFileArgMiddleware
+
+middleware = [CallToolWithFileArgMiddleware()]
+agent = create_agent(model, tools=tools, middleware=middleware)
+```
+
+---
+
+#### **QuickActionTasksAnnouncementMiddleware**
+
+Manages task announcements and execution flow for quick action scenarios.
+
+**Features:**
+- Announces the next task via `AIMessage` without immediate execution
+- Updates todo status to "in_progress" for the current task
+- Removes and replaces previous `write_todos` tool calls
+- Coordinates with `SubAgentMiddleware` for task execution
+
+---
+
+#### **RemoveToolsForSubagentMiddleware**
+
+Conditionally removes tools when an agent is called as a sub-agent.
+
+**Features:**
+- Detects when agent is running as a sub-agent
+- Removes `write_todos` and `task` tools in sub-agent mode
+- Prevents recursive task management in nested agent hierarchies
+
+### Middleware Execution Flow
+
+Middleware hooks are executed at different stages:
+
+1. **`before_model`**: Called before the LLM is invoked
+   - Modify state before model sees it
+   - Inject messages or update context
+
+2. **`modify_model_request`**: Called to modify the model request
+   - Change system prompts
+   - Filter or add tools
+   - Adjust model parameters
+
+3. **`after_model`**: Called after the LLM generates a response
+   - Transform tool calls
+   - Add acknowledgment messages
+   - Update state based on model output
+
 ## 📜 License
 
 Apache 2.0 (see [LICENSE](./LICENSE))
