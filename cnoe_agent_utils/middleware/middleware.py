@@ -6,7 +6,6 @@ capabilities for advanced agent workflows.
 
 from langgraph.runtime import Runtime
 from langchain.agents.middleware import AgentMiddleware, AgentState, ModelRequest
-from langchain_core.tools import BaseTool
 from langchain_core.messages import AIMessage, ToolMessage, RemoveMessage
 from langgraph.types import Command
 from typing import Any
@@ -96,14 +95,6 @@ class CallToolWithFileArgMiddleware(AgentMiddleware):
 
         if not tool_calls:
             return None
-        else:
-            try:
-                names = [
-                    (tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", None))
-                    for tc in tool_calls
-                ]
-            except Exception:
-                names = []
 
         mutated = False
         new_tool_calls = []
