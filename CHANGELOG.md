@@ -1,8 +1,13 @@
-## 0.3.7 (2025-11-10)
+## Unreleased
 
 ### Feat
 
 - synchronize agent base classes with ai-platform-engineering
+- **middleware**: add custom deepagents middleware
+
+### Fix
+
+- **lint**: fix linting
 
 ## 0.3.6 (2025-11-10)
 
