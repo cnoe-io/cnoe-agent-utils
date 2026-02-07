@@ -51,10 +51,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Python 3.13
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: "3.13"
 
@@ -64,7 +64,7 @@ jobs:
         version: latest
 
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       with:
         path: |
           .venv
@@ -89,7 +89,7 @@ jobs:
         pytest tests/ -v --cov=cnoe_agent_utils --cov-report=term-missing --cov-report=xml
     - name: Upload coverage to PR
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: coverage-report
         path: coverage.xml
@@ -100,7 +100,7 @@ jobs:
         genbadge coverage -i coverage.xml -o coverage-badge.svg
 
     - name: Upload coverage badge SVG as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: coverage-badge
         path: coverage-badge.svg
