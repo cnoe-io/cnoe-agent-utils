@@ -264,9 +264,22 @@ class LangfuseSpanContextManager:
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exit the Langfuse span context."""
+        """Exit the Langfuse span context.
+
+        Silently ignores the OTel ContextVar 'created in a different Context'
+        ValueError. This error occurs when an async generator that yields inside
+        a tracing span is closed (GeneratorExit) from a different asyncio context
+        than the one where the span was opened. It is harmless — the span data
+        is already flushed; only the ContextVar cleanup token is invalid.
+        """
         if self._context:
-            self._context.__exit__(exc_type, exc_val, exc_tb)
+            try:
+                self._context.__exit__(exc_type, exc_val, exc_tb)
+            except ValueError as e:
+                if "was created in a different Context" in str(e):
+                    logger.debug(f"OTel context detach skipped (async generator closed from different context): {e}")
+                else:
+                    raise
 
     def update_trace(self, **kwargs: Any) -> None:
         """Update trace with additional metadata."""
