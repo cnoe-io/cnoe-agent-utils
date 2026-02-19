@@ -251,7 +251,7 @@ wheels = [
 
 [[package]]
 name = "cnoe-agent-utils"
-version = "0.3.9"
+version = "0.3.10"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
@@ -401,8 +401,8 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=0.3.18" },
     { name = "langchain-openai", marker = "extra == 'azure'", specifier = ">=0.3.18" },
     { name = "langchain-openai", marker = "extra == 'openai'", specifier = ">=0.3.18" },
-    { name = "langfuse", specifier = ">=3.0.0,<4.0.0" },
-    { name = "langfuse", marker = "extra == 'tracing'", specifier = ">=3.0.0,<4.0.0" },
+    { name = "langfuse", specifier = ">=3.14.3,<4.0.0" },
+    { name = "langfuse", marker = "extra == 'tracing'", specifier = ">=3.14.3,<4.0.0" },
     { name = "langgraph", marker = "extra == 'agents-all'", specifier = ">=0.2.70" },
     { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2.70" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
@@ -447,7 +447,7 @@ dev = [
     { name = "langchain-google-vertexai", specifier = ">=3.0.1" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1.0" },
     { name = "langchain-openai", specifier = ">=0.3.18" },
-    { name = "langfuse", specifier = ">=3.0.0,<4.0.0" },
+    { name = "langfuse", specifier = ">=3.14.3,<4.0.0" },
     { name = "langgraph", specifier = ">=0.2.70" },
     { name = "mypy", specifier = ">=1.0.0" },
     { name = "opentelemetry-api", specifier = ">=1.20.0" },
@@ -1266,11 +1266,12 @@ wheels = [
 
 [[package]]
 name = "langfuse"
-version = "3.2.7"
+version = "3.14.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
     { name = "httpx" },
+    { name = "openai" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
@@ -1279,9 +1280,9 @@ dependencies = [
     { name = "requests" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/7e/51df7a35982094b46952b3e83f347642cee730367ff852379d72fdf6b78a/langfuse-3.2.7.tar.gz", hash = "sha256:1a908eb0f7951054876299d6f369826bfab344f417d04898cdb4d8992998bbb6", size = 153495, upload-time = "2025-08-15T16:11:08.444Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/44/1da5d5fb5a07949cd5bd53cabef1dafc1af272792f51277e6226eb96ceaa/langfuse-3.14.3.tar.gz", hash = "sha256:6d1529ae88d6f2ab74e255bb79537ae37aa1a576a1ec78f4643a7a6a00502f12", size = 235121, upload-time = "2026-02-17T17:43:25.903Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/02/79501d7ca11e8aca8cffb6cf53190f398f8f40213fcceaa15bda47b5e825/langfuse-3.2.7-py3-none-any.whl", hash = "sha256:bd6cdc4d4760b7159f9aba602284dd33fba61970c876abb54050ef39f07ea760", size = 300037, upload-time = "2025-08-15T16:11:06.167Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/cf/708c3aefa7687995eb4d3ae556e1adcaf1c4e99f5315810e9809c8cd9219/langfuse-3.14.3-py3-none-any.whl", hash = "sha256:e65f4168279dbc45b800021c59855a3268cf85d81e3275f7015441bf7f365bcb", size = 420438, upload-time = "2026-02-17T17:43:24.097Z" },
 ]
 
 [[package]]
