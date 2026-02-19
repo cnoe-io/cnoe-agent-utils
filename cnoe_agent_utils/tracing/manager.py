@@ -82,7 +82,16 @@ class TracingManager:
                 # Only import langfuse if tracing is enabled AND available
                 try:
                     from langfuse import get_client
-                    from langfuse.langchain import CallbackHandler
+
+                    # langfuse.langchain requires the 'langchain' package (not just langchain-core).
+                    # Check explicitly so we can give a clear error message.
+                    try:
+                        from langfuse.langchain import CallbackHandler
+                    except ImportError:
+                        raise ImportError(
+                            "langfuse.langchain integration requires the 'langchain' package. "
+                            "Install it with: pip install langchain>=0.3.0"
+                        )
 
                     self._langfuse_client = get_client()
                     self._langfuse_handler = CallbackHandler()
@@ -90,9 +99,9 @@ class TracingManager:
                     logger.info("✅ CNOE Agent Tracing: Langfuse initialized successfully")
 
                 except ImportError as import_err:
-                    logger.error(
-                        f"❌ CNOE Agent Tracing: Langfuse import failed ({import_err}). "
-                        "This should not happen since langfuse is a standard dependency."
+                    logger.warning(
+                        f"⚠️ CNOE Agent Tracing: Disabled due to missing dependency ({import_err}). "
+                        "To enable tracing, install: pip install langchain>=0.3.0 langfuse>=3.0.0"
                     )
                     self._is_enabled = False
 
@@ -255,9 +264,22 @@ class LangfuseSpanContextManager:
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exit the Langfuse span context."""
+        """Exit the Langfuse span context.
+
+        Silently ignores the OTel ContextVar 'created in a different Context'
+        ValueError. This error occurs when an async generator that yields inside
+        a tracing span is closed (GeneratorExit) from a different asyncio context
+        than the one where the span was opened. It is harmless — the span data
+        is already flushed; only the ContextVar cleanup token is invalid.
+        """
         if self._context:
-            self._context.__exit__(exc_type, exc_val, exc_tb)
+            try:
+                self._context.__exit__(exc_type, exc_val, exc_tb)
+            except ValueError as e:
+                if "was created in a different Context" in str(e):
+                    logger.debug(f"OTel context detach skipped (async generator closed from different context): {e}")
+                else:
+                    raise
 
     def update_trace(self, **kwargs: Any) -> None:
         """Update trace with additional metadata."""
