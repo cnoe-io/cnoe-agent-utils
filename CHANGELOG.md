@@ -1,3 +1,9 @@
+## Unreleased
+
+### Fix
+
+- **tracing**: silence OTel context detach error in async generators (#30)
+
 ## 0.3.9 (2025-12-08)
 
 ### Feat
