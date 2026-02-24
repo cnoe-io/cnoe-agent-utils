@@ -1,3 +1,9 @@
+## 0.3.11 (2026-02-24)
+
+### Fix
+
+- **tracing**: suppress OTel context-detach ERROR logs in async generators (#31)
+
 ## 0.3.10 (2026-02-18)
 
 ### Fix
