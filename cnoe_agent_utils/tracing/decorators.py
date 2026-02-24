@@ -158,7 +158,7 @@ def trace_agent_stream(
                     trace_name=trace_name,
                     update_input=update_input
                 )
-                span = span_ctx.__enter__()
+                span = span_ctx.__enter__()  # noqa: PLC2801
                 try:
                     final_response_content = None
                     async for event in stream_func(self, query, context_id, trace_id):

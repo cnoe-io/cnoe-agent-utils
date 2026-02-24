@@ -4,7 +4,7 @@
 import logging
 import os
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 from cnoe_agent_utils.tracing import (
     TracingManager,
@@ -220,7 +220,7 @@ class TestTraceAgentStreamGeneratorExit:
         gen = fake_stream(agent, "test query", "ctx-1")
 
         # Consume one event then close (simulates client disconnect)
-        first = await gen.__anext__()
+        first = await anext(gen)
         assert first["content"] == "hello"
         await gen.aclose()
 
@@ -236,7 +236,7 @@ class TestTraceAgentStreamGeneratorExit:
         agent = MagicMock()
         gen = fake_stream(agent, "q", "c")
 
-        await gen.__anext__()
+        await anext(gen)
         await gen.aclose()
 
 
