@@ -28,6 +28,7 @@ After:
 """
 
 import logging
+import sys
 from functools import wraps
 from typing import Any, AsyncIterable, Callable, Optional, TypeVar, cast
 
@@ -37,6 +38,32 @@ logger = logging.getLogger(__name__)
 
 # Type variable for async generator functions
 AsyncStreamFunc = TypeVar('AsyncStreamFunc', bound=Callable[..., AsyncIterable[dict[str, Any]]])
+
+
+def _quiet_span_exit(span_ctx: Any, exc_info: tuple = (None, None, None)) -> None:
+    """Exit a span context manager, suppressing the OTel context-detach noise.
+
+    When an async generator is finalized from a different asyncio task than the
+    one that created the OTel span, ``context.detach(token)`` raises a
+    ``ValueError`` that OTel catches internally and logs at ERROR via
+    ``logger.exception("Failed to detach context")``.  The error is harmless
+    (span data is already flushed) but pollutes logs.
+
+    This helper temporarily raises the log level of the ``opentelemetry.context``
+    logger to ``CRITICAL`` so the noisy message is silenced, then restores it.
+    """
+    otel_ctx_logger = logging.getLogger("opentelemetry.context")
+    saved_level = otel_ctx_logger.level
+    try:
+        otel_ctx_logger.setLevel(logging.CRITICAL)
+        span_ctx.__exit__(*exc_info)
+    except ValueError as exc:
+        if "was created in a different Context" not in str(exc):
+            raise
+        logger.debug("OTel context detach suppressed during span exit: %s", exc)
+    finally:
+        otel_ctx_logger.setLevel(saved_level)
+
 
 def trace_agent_stream(
     agent_name: str,
@@ -120,10 +147,9 @@ def trace_agent_stream(
             tracing.set_trace_id(trace_id)
             
             if tracing.is_enabled:
-                # Unified span management (replaces duplicated span logic)
                 span_name = f"🤖-{agent_name}-agent"
                 
-                with tracing.start_span(
+                span_ctx = tracing.start_span(
                     name=span_name,
                     agent_type=agent_name,
                     query=query,
@@ -131,20 +157,36 @@ def trace_agent_stream(
                     trace_id=trace_id,
                     trace_name=trace_name,
                     update_input=update_input
-                ) as span:
-                    # Agent executes with original logic - capture final response
+                )
+                span = span_ctx.__enter__()  # noqa: PLC2801
+                try:
                     final_response_content = None
                     async for event in stream_func(self, query, context_id, trace_id):
-                        # Capture any content response
                         if event.get('content'):
                             final_response_content = event.get('content')
                         yield event
                     
-                    # Update span with final output
                     if final_response_content:
                         span.update_trace(output=final_response_content)
                     else:
                         span.update_trace(output=f"{agent_name.title()} agent execution completed")
+                    span_ctx.__exit__(None, None, None)
+                except GeneratorExit:
+                    # Consumer stopped iterating (client disconnect, stream
+                    # completed early, etc.).  Close the span cleanly and
+                    # suppress the OTel "ContextVar was created in a different
+                    # Context" noise that fires when the async generator is
+                    # finalized from a different asyncio task.
+                    try:
+                        if final_response_content:
+                            span.update_trace(output=final_response_content)
+                    except Exception:
+                        pass
+                    _quiet_span_exit(span_ctx)
+                    return
+                except BaseException:
+                    _quiet_span_exit(span_ctx, sys.exc_info())
+                    raise
             else:
                 # Non-tracing path - just run original agent logic
                 async for event in stream_func(self, query, context_id, trace_id):
