@@ -123,7 +123,8 @@ def trace_agent_stream(
             self: Any,
             query: str,
             context_id: str,
-            trace_id: Optional[str] = None
+            trace_id: Optional[str] = None,
+            **kwargs: Any,
         ) -> AsyncIterable[dict[str, Any]]:
             
             # Replace ALL the duplicated setup code with unified manager
@@ -161,7 +162,7 @@ def trace_agent_stream(
                 span = span_ctx.__enter__()  # noqa: PLC2801
                 try:
                     final_response_content = None
-                    async for event in stream_func(self, query, context_id, trace_id):
+                    async for event in stream_func(self, query, context_id, trace_id, **kwargs):
                         if event.get('content'):
                             final_response_content = event.get('content')
                         yield event
@@ -189,7 +190,7 @@ def trace_agent_stream(
                     raise
             else:
                 # Non-tracing path - just run original agent logic
-                async for event in stream_func(self, query, context_id, trace_id):
+                async for event in stream_func(self, query, context_id, trace_id, **kwargs):
                     yield event
                     
         return cast(AsyncStreamFunc, wrapper)
