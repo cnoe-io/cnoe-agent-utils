@@ -1,3 +1,9 @@
+## 0.3.12 (2026-02-26)
+
+### Fix
+
+- **tracing**: forward **kwargs in trace_agent_stream decorator (#32)
+
 ## 0.3.11 (2026-02-24)
 
 ### Fix
