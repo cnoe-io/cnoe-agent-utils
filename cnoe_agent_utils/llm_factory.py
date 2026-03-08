@@ -285,6 +285,7 @@ class LLMFactory:
     tools: Iterable[Any] | None = None,
     strict_tools: bool = True,
     temperature: float | None = None,
+    model: str | None = None,
     **kwargs,
   ):
     """Return a LangChain chat model, optionally bound to *tools*.
@@ -296,6 +297,10 @@ class LLMFactory:
     If temperature is not specified, it will be read from provider-specific
     environment variables (e.g., BEDROCK_TEMPERATURE, OPENAI_TEMPERATURE).
     Temperature values are validated and clamped to the range 0.0-2.0.
+
+    If model is specified, it overrides the provider's default model
+    environment variable (e.g., OPENAI_MODEL_NAME, AWS_BEDROCK_MODEL_ID,
+    ANTHROPIC_MODEL_NAME). When None, uses the environment variable.
     """
     # Use environment variable if temperature not explicitly provided
     if temperature is None:
@@ -315,7 +320,8 @@ class LLMFactory:
             temperature = 0.0
 
     builder = getattr(self, f"_build_{self.provider}_llm")
-    llm = builder(response_format, temperature, **kwargs)
+    builder_kwargs = {"model_override": model} if model else {}
+    llm = builder(response_format, temperature, **builder_kwargs, **kwargs)
     return llm.bind_tools(tools, strict=strict_tools) if tools else llm
 
   # ------------------------------------------------------------------ #
@@ -326,6 +332,7 @@ class LLMFactory:
     self,
     response_format: str | dict | None,
     temperature: float | None,
+    model_override: str | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_AWS_AVAILABLE:
@@ -342,7 +349,7 @@ class LLMFactory:
     else:
       logging.info("[LLM] Using AWS credentials from environment variables")
 
-    model_id = os.getenv("AWS_BEDROCK_MODEL_ID")
+    model_id = model_override or os.getenv("AWS_BEDROCK_MODEL_ID")
     provider = os.getenv("AWS_BEDROCK_PROVIDER")
     region_name = os.getenv("AWS_REGION")
 
@@ -471,6 +478,7 @@ class LLMFactory:
     self,
     response_format: str | dict | None,
     temperature: float | None,
+    model_override: str | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_ANTHROPIC_AVAILABLE:
@@ -479,7 +487,7 @@ class LLMFactory:
         "Install with: pip install 'cnoe-agent-utils[anthropic]'"
       )
     api_key = os.getenv("ANTHROPIC_API_KEY")
-    model_name = os.getenv("ANTHROPIC_MODEL_NAME")
+    model_name = model_override or os.getenv("ANTHROPIC_MODEL_NAME")
 
     if not api_key:
       raise EnvironmentError("ANTHROPIC_API_KEY environment variable is required")
@@ -513,6 +521,7 @@ class LLMFactory:
     self,
     response_format: str | dict | None,
     temperature: float | None,
+    model_override: str | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_OPENAI_AVAILABLE:
@@ -520,7 +529,7 @@ class LLMFactory:
         "Azure OpenAI support requires langchain-openai. "
         "Install with: pip install 'cnoe-agent-utils[azure]'"
       )
-    deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+    deployment = model_override or os.getenv("AZURE_OPENAI_DEPLOYMENT")
     api_version = os.getenv("AZURE_OPENAI_API_VERSION")
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
@@ -589,6 +598,7 @@ class LLMFactory:
     self,
     response_format: str | dict | None,
     temperature: float | None,
+    model_override: str | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_GROQ_AVAILABLE:
@@ -597,7 +607,7 @@ class LLMFactory:
         "Install with: pip install 'cnoe-agent-utils[groq]'"
       )
     api_key = os.getenv("GROQ_API_KEY")
-    model_name = os.getenv("GROQ_MODEL_NAME")
+    model_name = model_override or os.getenv("GROQ_MODEL_NAME")
 
     # Validate required environment variables
     missing_vars = []
@@ -641,6 +651,7 @@ class LLMFactory:
     self,
     response_format: str | dict | None,
     temperature: float | None,
+    model_override: str | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_OPENAI_AVAILABLE:
@@ -650,7 +661,7 @@ class LLMFactory:
       )
     api_key = os.getenv("OPENAI_API_KEY")
     base_url = os.getenv("OPENAI_ENDPOINT", "https://api.openai.com/v1")
-    model_name = os.getenv("OPENAI_MODEL_NAME")
+    model_name = model_override or os.getenv("OPENAI_MODEL_NAME")
     user = os.getenv("OPENAI_USER")
 
     missing_vars = []
@@ -737,6 +748,7 @@ class LLMFactory:
     self,
     response_format: str | dict | None,
     temperature: float | None,
+    model_override: str | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_GOOGLE_GENAI_AVAILABLE:
@@ -746,7 +758,7 @@ class LLMFactory:
       )
 
     api_key = os.getenv("GOOGLE_API_KEY")
-    model_name = os.getenv("GOOGLE_GEMINI_MODEL_NAME", "gemini-2.0-flash")
+    model_name = model_override or os.getenv("GOOGLE_GEMINI_MODEL_NAME", "gemini-2.0-flash")
 
     if not api_key:
       raise EnvironmentError("GOOGLE_API_KEY environment variable is required")
@@ -768,6 +780,7 @@ class LLMFactory:
     self,
     response_format: str | dict | None,
     temperature: float | None,
+    model_override: str | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE:
@@ -789,7 +802,7 @@ class LLMFactory:
         f"Original error: {e}"
       )
 
-    model_name = os.getenv("VERTEXAI_MODEL_NAME")
+    model_name = model_override or os.getenv("VERTEXAI_MODEL_NAME")
     if not model_name:
       raise EnvironmentError("VERTEXAI_MODEL_NAME environment variable is required")
 
