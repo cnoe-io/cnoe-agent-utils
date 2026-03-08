@@ -1,3 +1,9 @@
+## 0.3.13 (2026-03-08)
+
+### Feat
+
+- **llm**: add model override parameter to get_llm()
+
 ## 0.3.12 (2026-02-26)
 
 ### Fix
