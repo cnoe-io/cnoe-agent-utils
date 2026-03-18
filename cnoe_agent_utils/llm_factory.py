@@ -448,6 +448,15 @@ class LLMFactory:
     if provider:
       common_args["provider"] = provider
 
+    # AWS_BEDROCK_BASE_MODEL_ID bypasses the GetInferenceProfile API call that
+    # langchain_aws makes when model_id is an application inference profile ARN.
+    # Required when the IAM role grants bedrock:InvokeModel on an application
+    # inference profile but does not grant bedrock:GetInferenceProfile.
+    base_model_id = os.getenv("AWS_BEDROCK_BASE_MODEL_ID")
+    if base_model_id:
+      common_args["base_model_id"] = base_model_id
+      logging.info("[LLM] Using base_model_id=%s (skips GetInferenceProfile lookup)", base_model_id)
+
     # Merge response_format into existing model_kwargs (preserves thinking config)
     if response_format:
       model_kwargs = common_args.get("model_kwargs", {})
