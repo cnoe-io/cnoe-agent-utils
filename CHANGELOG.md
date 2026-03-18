@@ -1,3 +1,9 @@
+## 0.3.14 (2026-03-18)
+
+### Feat
+
+- **aws-bedrock**: support AWS_BEDROCK_BASE_MODEL_ID to skip GetInferenceProfile (#34)
+
 ## 0.3.13 (2026-03-08)
 
 ### Feat
