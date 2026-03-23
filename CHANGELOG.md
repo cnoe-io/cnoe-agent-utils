@@ -1,3 +1,9 @@
+## Unreleased
+
+### Feat
+
+- **llm**: add configurable Bedrock timeout support
+
 ## 0.3.14 (2026-03-18)
 
 ### Feat
