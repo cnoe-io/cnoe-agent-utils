@@ -13,11 +13,13 @@ import dotenv
 # Conditional imports for optional dependencies
 try:
     from langchain_aws import ChatBedrock, ChatBedrockConverse
+    from botocore.config import Config as BotocoreConfig
     _LANGCHAIN_AWS_AVAILABLE = True
 except ImportError:
     _LANGCHAIN_AWS_AVAILABLE = False
     ChatBedrock = None
     ChatBedrockConverse = None
+    BotocoreConfig = None
 
 try:
     from langchain_anthropic import ChatAnthropic
@@ -393,6 +395,20 @@ class LLMFactory:
       logging.info("[LLM] If model doesn't support caching, AWS Bedrock API will return an error.")
 
     logging.info(f"[LLM] Bedrock model={model_id} profile={credentials_profile} region={region_name}")
+
+
+    # Configure botocore timeouts for Bedrock (helps with long-running LLM calls)
+    read_timeout = os.getenv("AWS_BEDROCK_READ_TIMEOUT")
+    connect_timeout = os.getenv("AWS_BEDROCK_CONNECT_TIMEOUT")
+    if read_timeout or connect_timeout:
+      botocore_config_kwargs = {}
+      if read_timeout:
+        botocore_config_kwargs["read_timeout"] = int(read_timeout)
+      if connect_timeout:
+        botocore_config_kwargs["connect_timeout"] = int(connect_timeout)
+      if BotocoreConfig and botocore_config_kwargs:
+        kwargs["config"] = BotocoreConfig(**botocore_config_kwargs)
+        logging.info(f"[LLM] Bedrock botocore config: {botocore_config_kwargs}")
 
     # Build common args for both ChatBedrock and ChatBedrockConverse
     common_args = {
