@@ -1,3 +1,9 @@
+## 0.4.0 (2026-05-01)
+
+### Feat
+
+- **llm_factory**: lazy provider imports to reduce baseline memory ~200MB
+
 ## 0.3.15 (2026-03-23)
 
 ### Feat
