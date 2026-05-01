@@ -18,7 +18,7 @@ class TestBedrockPromptCaching:
         "AWS_SECRET_ACCESS_KEY": "test_secret",
         "AWS_BEDROCK_ENABLE_PROMPT_CACHE": "true"
     })
-    @patch("cnoe_agent_utils.llm_factory.ChatBedrockConverse")
+    @patch("langchain_aws.ChatBedrockConverse")
     def test_cache_enabled_uses_converse(self, mock_chatbedrock_converse):
         """Test that ChatBedrockConverse is used when caching is enabled."""
         mock_instance = MagicMock()
@@ -39,7 +39,7 @@ class TestBedrockPromptCaching:
         "AWS_SECRET_ACCESS_KEY": "test_secret",
         "AWS_BEDROCK_ENABLE_PROMPT_CACHE": "false"
     })
-    @patch("cnoe_agent_utils.llm_factory.ChatBedrock")
+    @patch("langchain_aws.ChatBedrock")
     def test_cache_disabled_uses_chatbedrock(self, mock_chatbedrock):
         """Test that ChatBedrock is used when caching is disabled."""
         mock_instance = MagicMock()
@@ -60,7 +60,7 @@ class TestBedrockPromptCaching:
         "AWS_SECRET_ACCESS_KEY": "test_secret",
         "AWS_BEDROCK_ENABLE_PROMPT_CACHE": "true"
     })
-    @patch("cnoe_agent_utils.llm_factory.ChatBedrockConverse")
+    @patch("langchain_aws.ChatBedrockConverse")
     def test_cache_enabled_log_message(self, mock_chatbedrock_converse, caplog):
         """Test that appropriate log message is shown when caching is enabled."""
         import logging
@@ -88,7 +88,7 @@ class TestBedrockPromptCaching:
         "AWS_SECRET_ACCESS_KEY": "test_secret",
         "AWS_BEDROCK_ENABLE_PROMPT_CACHE": "true"
     })
-    @patch("cnoe_agent_utils.llm_factory.ChatBedrockConverse")
+    @patch("langchain_aws.ChatBedrockConverse")
     def test_regional_model_id_with_caching(self, mock_chatbedrock_converse):
         """Test that regional model IDs (us. prefix) work with caching enabled."""
         mock_instance = MagicMock()
@@ -110,7 +110,7 @@ class TestBedrockPromptCaching:
         "AWS_SECRET_ACCESS_KEY": "test_secret",
         "AWS_BEDROCK_ENABLE_PROMPT_CACHE": "true"
     })
-    @patch("cnoe_agent_utils.llm_factory.ChatBedrockConverse")
+    @patch("langchain_aws.ChatBedrockConverse")
     def test_amazon_model_with_caching(self, mock_chatbedrock_converse):
         """Test that Amazon Nova models work with caching enabled."""
         mock_instance = MagicMock()
@@ -132,7 +132,7 @@ class TestBedrockPromptCaching:
         "AWS_SECRET_ACCESS_KEY": "test_secret",
         "AWS_BEDROCK_PROVIDER": "anthropic"
     })
-    @patch("cnoe_agent_utils.llm_factory.ChatBedrock")
+    @patch("langchain_aws.ChatBedrock")
     def test_explicit_provider_passed_through(self, mock_chatbedrock):
         """Test that explicitly set AWS_BEDROCK_PROVIDER is passed through."""
         mock_instance = MagicMock()

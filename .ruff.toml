@@ -1,6 +1,9 @@
 line-length = 140
 indent-width = 2
 
+[format]
+indent-style = "space"
+
 [lint]
 preview = true
 
