@@ -55,6 +55,92 @@ _BEDROCK_CLIENT_ALIASES = {
     "chatbedrock": "legacy",
 }
 
+# Claude models that reject the sampling parameters (`temperature`, `top_p`,
+# `top_k`) with a 400: "`temperature` is deprecated for this model."
+#
+# Removal starts at Opus 4.7 / Sonnet 5 — Opus 4.6, Sonnet 4.6 and every earlier
+# Claude model still accept sampling parameters normally and must NOT be listed
+# here, or callers relying on temperature=0 silently lose deterministic output.
+#
+# Matched as a substring against the lowercased model id, so provider-prefixed
+# forms are covered too: "anthropic.claude-sonnet-5" (Bedrock),
+# "global.anthropic.claude-opus-5" (Bedrock cross-region inference profile).
+_ANTHROPIC_NO_SAMPLING_PARAM_MODELS = (
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-fable-5",
+    "claude-mythos-5",
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+)
+
+# Sampling params passed through **kwargs that these models also reject.
+_SAMPLING_PARAM_KWARGS = ("top_p", "top_k")
+
+# This library's historical implicit default, applied whenever a caller does not
+# pass one. `get_llm()` already resolves an unset temperature to this value, so a
+# builder receiving it cannot distinguish "unset" from "explicitly set to 0".
+_LIBRARY_DEFAULT_TEMPERATURE = 0.0
+
+
+def _model_rejects_sampling_params(model_id: Optional[str]) -> bool:
+    """True if `model_id` is a Claude model that 400s on any sampling parameter."""
+    if not model_id:
+        return False
+    lowered = model_id.lower()
+    return any(needle in lowered for needle in _ANTHROPIC_NO_SAMPLING_PARAM_MODELS)
+
+
+def _sanitize_sampling_params(
+    model_id: Optional[str],
+    temperature: Optional[float],
+    kwargs: Dict[str, Any],
+    provider_label: str,
+) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    """Split sampling parameters out of a Claude request.
+
+    Returns ``(sampling_kwargs, remaining_kwargs)`` to merge into the client
+    constructor call.
+
+    Backward compatible: for every model outside
+    `_ANTHROPIC_NO_SAMPLING_PARAM_MODELS`, behavior is unchanged — `temperature`
+    if given, else this library's long-standing default of 0, and `top_p`/`top_k`
+    passed straight through.
+
+    For the restricted models every sampling parameter is omitted entirely rather
+    than sent at some "safe" value. The docs are inconsistent about whether these
+    models accept the parameter at Anthropic's own default (1.0) or reject it at
+    any value, so omitting is the only behavior that is correct under both
+    readings — and omitting is what Anthropic's migration guide prescribes.
+    """
+    if not _model_rejects_sampling_params(model_id):
+        return {"temperature": temperature if temperature is not None else 0}, kwargs
+
+    remaining = {k: v for k, v in kwargs.items() if k not in _SAMPLING_PARAM_KWARGS}
+
+    # Only warn about values the caller plausibly chose. An unset temperature has
+    # already been resolved to _LIBRARY_DEFAULT_TEMPERATURE upstream, so treating
+    # it as noteworthy would warn on every single default construction.
+    dropped = [
+        f"{k}={kwargs[k]}" for k in _SAMPLING_PARAM_KWARGS if k in kwargs
+    ]
+    if temperature is not None and temperature != _LIBRARY_DEFAULT_TEMPERATURE:
+        dropped.insert(0, f"temperature={temperature}")
+
+    if dropped:
+        logging.warning(
+            "[LLM] model=%s (%s) does not accept sampling parameters; dropping %s "
+            "instead of sending values the API rejects with a 400.",
+            model_id, provider_label, ", ".join(dropped),
+        )
+    else:
+        logging.debug(
+            "[LLM] model=%s (%s) does not accept sampling parameters; omitting temperature.",
+            model_id, provider_label,
+        )
+    return {}, remaining
+
+
 def _as_bool(v: Optional[str], default: bool=False) -> bool:
     if v is None:
         return default
@@ -453,9 +539,12 @@ class LLMFactory:
         logging.info(f"[LLM] Bedrock botocore config: {botocore_config_kwargs}")
 
     # Build common args for both ChatBedrock and ChatBedrockConverse
+    sampling_args, kwargs = _sanitize_sampling_params(
+      model_id, temperature, kwargs, "AWS Bedrock"
+    )
     common_args = {
       "model_id": model_id,
-      "temperature": temperature if temperature is not None else 0,
+      **sampling_args,
       **kwargs,
     }
 
@@ -601,11 +690,15 @@ class LLMFactory:
       model_kwargs["thinking_budget"] = thinking_budget
       logging.info(f"[LLM] Extended thinking configured with thinking_budget={thinking_budget}")
 
+    sampling_args, kwargs = _sanitize_sampling_params(
+      model_name, temperature, kwargs, "Anthropic"
+    )
+
     return ChatAnthropic(
       model_name=model_name,
       anthropic_api_key=api_key,
-      temperature=temperature if temperature is not None else 0,
       model_kwargs=model_kwargs,
+      **sampling_args,
       **kwargs,
     )
 
