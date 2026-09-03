@@ -1,3 +1,9 @@
+## 0.4.2 (2026-09-03)
+
+### Fix
+
+- don't send default temperature=0 to Claude Opus/Sonnet 5+ models (#40)
+
 ## 0.4.1 (2026-06-05)
 
 ### Feat
