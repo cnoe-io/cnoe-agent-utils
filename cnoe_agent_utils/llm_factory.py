@@ -7,7 +7,8 @@ import importlib.util
 import logging
 import json
 import os
-from typing import Any, Iterable, Optional, Dict, Literal, TypedDict
+from dataclasses import dataclass
+from typing import Any, Dict, Iterable, Literal, Optional, TypedDict
 import dotenv
 
 
@@ -196,11 +197,267 @@ def _build_anthropic_timeout(read_timeout: int | None) -> float | None:
 THINKING_DEFAULT_BUDGET = 1024
 THINKING_MIN_BUDGET = 1024
 
+ReasoningEffort = Literal["low", "medium", "high", "max"]
+REASONING_EFFORTS: tuple[ReasoningEffort, ...] = ("low", "medium", "high", "max")
+_THINKING_BUDGETS: dict[ReasoningEffort, int] = {
+    "low": 1024,
+    "medium": 4096,
+    "high": 8192,
+    "max": 16384,
+}
+_GEMINI_THINKING_BUDGETS: dict[ReasoningEffort, int] = {
+    "low": 1024,
+    "medium": 8192,
+    "high": 24576,
+    "max": 24576,
+}
+
+
+def _gemini_25_thinking_budget(model: str, effort: ReasoningEffort) -> int:
+    """Map the portable scale into each Gemini 2.5 family's documented range."""
+    if "pro" in model.lower() and effort == "max":
+        return 32768
+    return _GEMINI_THINKING_BUDGETS[effort]
+
+
+@dataclass(frozen=True)
+class ReasoningEffortResolution:
+    """Provider-native representation of a portable reasoning effort."""
+
+    requested: ReasoningEffort
+    supported: bool
+    native_effort: str | None = None
+    thinking_budget: int | None = None
+    adaptive_thinking: bool = False
+    reason: str | None = None
+
+
+def _reasoning_effort_overrides() -> dict[str, dict[str, str | int]]:
+    """Read optional model mappings for aliases and privately hosted models."""
+    raw = os.getenv("LLM_REASONING_EFFORT_MAP_JSON")
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("LLM_REASONING_EFFORT_MAP_JSON must be valid JSON") from exc
+    if not isinstance(value, dict):
+        raise TypeError("LLM_REASONING_EFFORT_MAP_JSON must be a JSON object")
+    return value
+
+
+def _override_effort_mapping(provider: str, model: str) -> dict[str, str | int] | None:
+    target = f"{provider}:{model}".lower()
+    matches = [
+        (prefix.lower(), mapping)
+        for prefix, mapping in _reasoning_effort_overrides().items()
+        if target.startswith(prefix.lower()) and isinstance(mapping, dict)
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda item: len(item[0]))[1]
+
+
+def _claude_uses_native_effort(model: str) -> bool:
+    """Return whether this Claude family uses adaptive thinking and effort."""
+    normalized = model.lower()
+    return any(
+        family in normalized
+        for family in (
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-sonnet-4-6",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-fable-5",
+            "claude-mythos-5",
+            "claude-mythos-preview",
+        )
+    )
+
+
+def _bedrock_adaptive_effort(model: str, effort: ReasoningEffort) -> str:
+    """Map max to the strongest adaptive effort Bedrock accepts per model."""
+    if effort != "max":
+        return effort
+    normalized = model.lower()
+    if any(
+        family in normalized
+        for family in (
+            "claude-opus-4-6",
+            "claude-sonnet-4-6",
+            "claude-opus-5",
+        )
+    ):
+        return "max"
+    return "high"
+
+
+def _claude_supports_manual_thinking(model: str) -> bool:
+    """Return whether this Claude family accepts a fixed thinking budget."""
+    normalized = model.lower()
+    return "claude-3-7" in normalized or any(
+        family in normalized
+        for family in (
+            "claude-sonnet-4",
+            "claude-opus-4",
+            "claude-haiku-4",
+            "claude-4-",
+        )
+    )
+
+
+def resolve_reasoning_effort(
+    provider: str,
+    model: str,
+    effort: ReasoningEffort,
+) -> ReasoningEffortResolution:
+    """Translate the portable effort scale to a provider/model setting.
+
+    Custom and aliased deployments can be described with
+    ``LLM_REASONING_EFFORT_MAP_JSON``. Keys are ``provider:model-prefix`` and
+    the longest matching prefix wins. Values map the four portable levels to
+    either a provider-native string or a token budget.
+    """
+    if effort not in REASONING_EFFORTS:
+        allowed = ", ".join(REASONING_EFFORTS)
+        raise ValueError(f"Unsupported reasoning effort {effort!r}; expected one of: {allowed}")
+
+    normalized_provider = provider.lower().replace("_", "-")
+    normalized_model = model.lower()
+    override = _override_effort_mapping(normalized_provider, normalized_model)
+    if override is not None:
+        mapped = override.get(effort)
+        if isinstance(mapped, bool) or not isinstance(mapped, (str, int)):
+            return ReasoningEffortResolution(
+                requested=effort,
+                supported=False,
+                reason=f"No {effort} mapping is configured for {model}",
+            )
+        if isinstance(mapped, int):
+            return ReasoningEffortResolution(effort, True, thinking_budget=mapped)
+        return ReasoningEffortResolution(
+            effort,
+            True,
+            native_effort=mapped,
+            adaptive_thinking=normalized_provider in {"anthropic-claude", "aws-bedrock"},
+        )
+
+    if normalized_provider in {"openai", "azure-openai"}:
+        if normalized_model.startswith("gpt-5") and "-pro" in normalized_model:
+            if effort in {"high", "max"}:
+                return ReasoningEffortResolution(effort, True, native_effort="high")
+            return ReasoningEffortResolution(
+                effort,
+                False,
+                reason=f"{model} only supports high reasoning effort",
+            )
+        if normalized_model.startswith(("gpt-5", "gpt-6")):
+            if normalized_model.startswith(("gpt-5.6", "gpt-6")):
+                strongest = "max"
+            elif normalized_model.startswith(
+                ("gpt-5.2", "gpt-5.3", "gpt-5.4", "gpt-5.5", "gpt-5.1-codex-max")
+            ):
+                strongest = "xhigh"
+            else:
+                strongest = "high"
+            native = strongest if effort == "max" else effort
+            return ReasoningEffortResolution(effort, True, native_effort=native)
+        if normalized_model.startswith("o1-mini"):
+            return ReasoningEffortResolution(
+                effort,
+                False,
+                reason="o1-mini does not support configurable reasoning effort",
+            )
+        if normalized_model.startswith(("o1", "o3", "o4")):
+            native = "high" if effort == "max" else effort
+            return ReasoningEffortResolution(effort, True, native_effort=native)
+
+    if normalized_provider in {"anthropic-claude", "aws-bedrock"}:
+        if _claude_uses_native_effort(normalized_model):
+            native_effort = (
+                _bedrock_adaptive_effort(normalized_model, effort)
+                if normalized_provider == "aws-bedrock"
+                else effort
+            )
+            return ReasoningEffortResolution(
+                effort,
+                True,
+                native_effort=native_effort,
+                adaptive_thinking=True,
+            )
+        if "claude-opus-4-5" in normalized_model:
+            native_effort = "high" if effort == "max" else effort
+            return ReasoningEffortResolution(
+                effort,
+                True,
+                native_effort=native_effort,
+                thinking_budget=_THINKING_BUDGETS[effort],
+            )
+        if _claude_supports_manual_thinking(normalized_model):
+            return ReasoningEffortResolution(
+                effort,
+                True,
+                thinking_budget=_THINKING_BUDGETS[effort],
+            )
+
+    if normalized_provider in {"google-gemini", "gcp-vertexai"}:
+        if "gemini-3" in normalized_model:
+            native = "high" if effort == "max" else effort
+            return ReasoningEffortResolution(effort, True, native_effort=native)
+        if "gemini-2.5" in normalized_model:
+            return ReasoningEffortResolution(
+                effort,
+                True,
+                thinking_budget=_gemini_25_thinking_budget(normalized_model, effort),
+            )
+        if _claude_supports_manual_thinking(normalized_model):
+            return ReasoningEffortResolution(
+                effort,
+                True,
+                thinking_budget=_THINKING_BUDGETS[effort],
+            )
+
+    if normalized_provider == "groq" and "gpt-oss" in normalized_model:
+        native = "high" if effort == "max" else effort
+        return ReasoningEffortResolution(effort, True, native_effort=native)
+
+    return ReasoningEffortResolution(
+        requested=effort,
+        supported=False,
+        reason=f"{provider} model {model} does not advertise configurable reasoning effort",
+    )
+
 # TypedDict for extended thinking configuration
 class ThinkingConfig(TypedDict):
     """Configuration for extended thinking models."""
     type: Literal["enabled"]
     budget_tokens: int
+
+def _clamp_claude_thinking_budget(
+    thinking_budget: int,
+    max_tokens: Optional[int],
+) -> int:
+    """Keep a Claude manual-thinking budget below the total output limit."""
+    if not max_tokens:
+        return thinking_budget
+    maximum_budget = max_tokens - 1
+    if maximum_budget < THINKING_MIN_BUDGET:
+        raise ValueError(
+            f"max_tokens must be greater than {THINKING_MIN_BUDGET} "
+            "when extended thinking is enabled"
+        )
+    if thinking_budget > maximum_budget:
+        logging.warning(
+            "[LLM] Thinking budget %s must be less than max_tokens %s; clamping to %s",
+            thinking_budget,
+            max_tokens,
+            maximum_budget,
+        )
+        return maximum_budget
+    return thinking_budget
+
 
 def _parse_thinking_budget(env_var: str, max_tokens: Optional[int] = None) -> int:
     """Parse and validate thinking budget from environment variable.
@@ -229,12 +486,7 @@ def _parse_thinking_budget(env_var: str, max_tokens: Optional[int] = None) -> in
         logging.warning(f"[LLM] {env_var}={thinking_budget} is below minimum {THINKING_MIN_BUDGET}, using {THINKING_MIN_BUDGET}")
         thinking_budget = THINKING_MIN_BUDGET
 
-    # Validate upper bound if max_tokens is provided
-    if max_tokens and thinking_budget > max_tokens:
-        logging.warning(f"[LLM] Thinking budget {thinking_budget} exceeds max_tokens {max_tokens}; clamping to {max_tokens}")
-        thinking_budget = max_tokens
-
-    return thinking_budget
+    return _clamp_claude_thinking_budget(thinking_budget, max_tokens)
 
 class LLMFactory:
   """Factory that returns a *ready‑to‑use* LangChain chat model.
@@ -414,6 +666,7 @@ class LLMFactory:
     strict_tools: bool = True,
     temperature: float | None = None,
     model: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     """Return a LangChain chat model, optionally bound to *tools*.
@@ -429,6 +682,9 @@ class LLMFactory:
     If model is specified, it overrides the provider's default model
     environment variable (e.g., OPENAI_MODEL_NAME, AWS_BEDROCK_MODEL_ID,
     ANTHROPIC_MODEL_NAME). When None, uses the environment variable.
+
+    If reasoning_effort is specified, it takes precedence over provider
+    environment variables and is translated to the model's native setting.
     """
     # Use environment variable if temperature not explicitly provided
     if temperature is None:
@@ -449,6 +705,8 @@ class LLMFactory:
 
     builder = getattr(self, f"_build_{self.provider}_llm")
     builder_kwargs = {"model_override": model} if model else {}
+    if reasoning_effort is not None:
+        builder_kwargs["reasoning_effort"] = reasoning_effort
     llm = builder(response_format, temperature, **builder_kwargs, **kwargs)
     return llm.bind_tools(tools, strict=strict_tools) if tools else llm
 
@@ -461,6 +719,7 @@ class LLMFactory:
     response_format: str | dict | None,
     temperature: float | None,
     model_override: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_AWS_AVAILABLE:
@@ -513,7 +772,16 @@ class LLMFactory:
         f"Missing the following AWS Bedrock environment variable(s): {', '.join(missing_vars)}."
       )
     # Check for extended thinking configuration
-    thinking_enabled = _as_bool(os.getenv("AWS_BEDROCK_THINKING_ENABLED"), False)
+    effort_resolution = (
+      resolve_reasoning_effort("aws-bedrock", model_id, reasoning_effort)
+      if reasoning_effort is not None else None
+    )
+    if effort_resolution is not None and not effort_resolution.supported:
+      raise ValueError(effort_resolution.reason)
+    thinking_enabled = (
+      effort_resolution is not None
+      or _as_bool(os.getenv("AWS_BEDROCK_THINKING_ENABLED"), False)
+    )
 
     # Check for prompt caching configuration
     enable_cache = _as_bool(os.getenv("AWS_BEDROCK_ENABLE_PROMPT_CACHE"), False)
@@ -572,12 +840,45 @@ class LLMFactory:
           f"[LLM] Extended thinking is not compatible with: {', '.join(incompatible_params)}. These parameters have been removed."
         )
 
-      max_tokens_limit = kwargs.get("max_tokens")
-      thinking_budget = _parse_thinking_budget("AWS_BEDROCK_THINKING_BUDGET", max_tokens_limit)
+      if effort_resolution is not None and effort_resolution.adaptive_thinking:
+        model_kwargs["thinking"] = {"type": "adaptive"}
+        model_kwargs["output_config"] = {
+          "effort": effort_resolution.native_effort,
+        }
+        logging.info(
+          "[LLM] Adaptive thinking enabled with effort=%s",
+          effort_resolution.native_effort,
+        )
+      else:
+        max_tokens_limit = kwargs.get("max_tokens")
+        thinking_budget = (
+          effort_resolution.thinking_budget
+          if effort_resolution is not None
+          else _parse_thinking_budget(
+            "AWS_BEDROCK_THINKING_BUDGET",
+            max_tokens_limit,
+          )
+        )
+        thinking_budget = _clamp_claude_thinking_budget(
+          thinking_budget,
+          max_tokens_limit,
+        )
 
-      thinking_config: ThinkingConfig = {"type": "enabled", "budget_tokens": thinking_budget}
-      model_kwargs["thinking"] = thinking_config
-      logging.info(f"[LLM] Extended thinking enabled with budget_tokens={thinking_budget}")
+        thinking_config: ThinkingConfig = {
+          "type": "enabled",
+          "budget_tokens": thinking_budget,
+        }
+        model_kwargs["thinking"] = thinking_config
+        if effort_resolution is not None and effort_resolution.native_effort is not None:
+          model_kwargs["output_config"] = {
+            "effort": effort_resolution.native_effort,
+          }
+          if "claude-opus-4-5" in model_id.lower():
+            model_kwargs["anthropic_beta"] = ["effort-2025-11-24"]
+        logging.info(
+          "[LLM] Extended thinking enabled with budget_tokens=%s",
+          thinking_budget,
+        )
       logging.info("[LLM] Note: Extended thinking is not compatible with temperature, top_p, top_k, or forced tool use")
 
       # Update common_args with the model_kwargs
@@ -625,7 +926,10 @@ class LLMFactory:
       model_kwargs = dict(anthropic_args.get("model_kwargs", {}))
       if "thinking" in model_kwargs and "thinking" not in anthropic_args:
         anthropic_args["thinking"] = model_kwargs.pop("thinking")
-        anthropic_args["model_kwargs"] = model_kwargs
+      if "output_config" in model_kwargs:
+        output_config = model_kwargs.pop("output_config")
+        anthropic_args["effort"] = output_config.get("effort")
+      anthropic_args["model_kwargs"] = model_kwargs
       if "timeout" not in anthropic_args:
         anthropic_timeout = _build_anthropic_timeout(
           _timeout_value(read_timeout)
@@ -639,6 +943,25 @@ class LLMFactory:
     elif bedrock_client == "converse":
       # ChatBedrockConverse doesn't support 'streaming' parameter.
       # Streaming is enabled by default for Converse API.
+      model_kwargs = dict(common_args.get("model_kwargs", {}))
+      thinking = model_kwargs.pop("thinking", None)
+      output_config = model_kwargs.pop("output_config", None)
+      anthropic_beta = model_kwargs.pop("anthropic_beta", None)
+      if thinking or output_config or anthropic_beta:
+        additional_fields = dict(
+          common_args.get("additional_model_request_fields", {})
+        )
+        if thinking:
+          additional_fields["thinking"] = thinking
+        if output_config:
+          additional_fields["output_config"] = output_config
+        if anthropic_beta:
+          additional_fields["anthropic_beta"] = anthropic_beta
+        common_args["additional_model_request_fields"] = additional_fields
+      if model_kwargs:
+        common_args["model_kwargs"] = model_kwargs
+      else:
+        common_args.pop("model_kwargs", None)
       llm = ChatBedrockConverse(**common_args)
       logging.info("[LLM] Using ChatBedrockConverse with native prompt caching support")
     else:
@@ -659,6 +982,7 @@ class LLMFactory:
     response_format: str | dict | None,
     temperature: float | None,
     model_override: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_ANTHROPIC_AVAILABLE:
@@ -681,25 +1005,62 @@ class LLMFactory:
     model_kwargs = {"response_format": response_format} if response_format else {}
 
     # Check for extended thinking configuration (Claude 4+ models)
-    thinking_enabled = _as_bool(os.getenv("ANTHROPIC_THINKING_ENABLED"), False)
+    effort_resolution = (
+      resolve_reasoning_effort("anthropic-claude", model_name, reasoning_effort)
+      if reasoning_effort is not None else None
+    )
+    if effort_resolution is not None and not effort_resolution.supported:
+      raise ValueError(effort_resolution.reason)
+    thinking_enabled = (
+      effort_resolution is not None
+      or _as_bool(os.getenv("ANTHROPIC_THINKING_ENABLED"), False)
+    )
+    native_effort = (
+      effort_resolution.native_effort
+      if effort_resolution is not None
+      else None
+    )
     if thinking_enabled:
       logging.info("[LLM] Extended thinking enabled for Anthropic")
 
-      max_tokens_limit = kwargs.get("max_tokens")
-      thinking_budget = _parse_thinking_budget("ANTHROPIC_THINKING_BUDGET", max_tokens_limit)
-      model_kwargs["thinking_budget"] = thinking_budget
-      logging.info(f"[LLM] Extended thinking configured with thinking_budget={thinking_budget}")
+      if effort_resolution is None or not effort_resolution.adaptive_thinking:
+        max_tokens_limit = kwargs.get("max_tokens")
+        thinking_budget = (
+          effort_resolution.thinking_budget
+          if effort_resolution is not None
+          else _parse_thinking_budget(
+            "ANTHROPIC_THINKING_BUDGET",
+            max_tokens_limit,
+          )
+        )
+        thinking_budget = _clamp_claude_thinking_budget(
+          thinking_budget,
+          max_tokens_limit,
+        )
+        model_kwargs["thinking_budget"] = thinking_budget
+        logging.info(
+          "[LLM] Extended thinking configured with thinking_budget=%s",
+          thinking_budget,
+        )
 
     sampling_args, kwargs = _sanitize_sampling_params(
       model_name, temperature, kwargs, "Anthropic"
     )
 
-    return ChatAnthropic(
-      model_name=model_name,
-      anthropic_api_key=api_key,
-      model_kwargs=model_kwargs,
+    anthropic_args = {
+      "model_name": model_name,
+      "anthropic_api_key": api_key,
+      "model_kwargs": model_kwargs,
       **sampling_args,
       **kwargs,
+    }
+    if effort_resolution is not None and effort_resolution.adaptive_thinking:
+      anthropic_args["thinking"] = {"type": "adaptive"}
+    if native_effort is not None:
+      anthropic_args["effort"] = native_effort
+
+    return ChatAnthropic(
+      **anthropic_args,
     )
 
   def _build_azure_openai_llm(
@@ -707,6 +1068,7 @@ class LLMFactory:
     response_format: str | dict | None,
     temperature: float | None,
     model_override: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_OPENAI_AVAILABLE:
@@ -740,10 +1102,22 @@ class LLMFactory:
 
 
     # --- GPT-5 support: Responses API + reasoning + streaming ---
-    use_responses = _as_bool(os.getenv("AZURE_OPENAI_USE_RESPONSES"),
-                            (deployment or "").lower().startswith("gpt-5"))
+    use_responses = _as_bool(
+      os.getenv("AZURE_OPENAI_USE_RESPONSES"),
+      (deployment or "").lower().startswith(("gpt-5", "gpt-6")),
+    )
 
-    reasoning_effort  = os.getenv("AZURE_OPENAI_REASONING_EFFORT")   # low|medium|high
+    effort_resolution = (
+      resolve_reasoning_effort("azure-openai", deployment, reasoning_effort)
+      if reasoning_effort is not None else None
+    )
+    if effort_resolution is not None and not effort_resolution.supported:
+      raise ValueError(effort_resolution.reason)
+    native_reasoning_effort = (
+      effort_resolution.native_effort
+      if effort_resolution is not None
+      else os.getenv("AZURE_OPENAI_REASONING_EFFORT")
+    )
     reasoning_summary = os.getenv("AZURE_OPENAI_REASONING_SUMMARY")  # auto|concise|detailed
     verbosity         = os.getenv("AZURE_OPENAI_VERBOSITY")          # low|medium|high
     os.getenv("AZURE_OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
@@ -755,9 +1129,16 @@ class LLMFactory:
     if verbosity:
         model_kwargs["verbosity"] = verbosity
     extra_body: Dict[str, Any] = {}
-    if use_responses and (reasoning_effort or reasoning_summary):
+    if use_responses and (
+      (effort_resolution is None and native_reasoning_effort)
+      or reasoning_summary
+    ):
         extra_body["reasoning"] = {
-            **({"effort": reasoning_effort} if reasoning_effort else {}),
+            **(
+              {"effort": native_reasoning_effort}
+              if effort_resolution is None and native_reasoning_effort
+              else {}
+            ),
             **({"summary": reasoning_summary} if reasoning_summary else {}),
         }
 
@@ -765,26 +1146,35 @@ class LLMFactory:
     kwargs_to_pass = {}
     if temperature is not None and temperature != 0.0:
         kwargs_to_pass["temperature"] = temperature
-    elif not (deployment or "").lower().startswith("gpt-5"):
+    elif not (deployment or "").lower().startswith(("gpt-5", "gpt-6")):
         # For non-GPT-5 models, set temperature to 0 if not specified
         kwargs_to_pass["temperature"] = 0
 
-    return AzureChatOpenAI(
-        azure_endpoint=endpoint,
-        azure_deployment=deployment,
-        model=deployment,  # Add model parameter for newer LangChain versions
-        api_key=api_key,
-        api_version=api_version,
-        streaming=streaming,
+    azure_kwargs = {
+        "azure_endpoint": endpoint,
+        "azure_deployment": deployment,
+        "model": deployment,
+        "api_key": api_key,
+        "api_version": api_version,
+        "streaming": streaming,
+        "use_responses_api": use_responses,
         **kwargs_to_pass,
-        **kwargs,
-      )
+    }
+    if model_kwargs:
+      azure_kwargs["model_kwargs"] = model_kwargs
+    if extra_body:
+      azure_kwargs["extra_body"] = extra_body
+    if effort_resolution is not None:
+      azure_kwargs["reasoning_effort"] = native_reasoning_effort
+
+    return AzureChatOpenAI(**azure_kwargs, **kwargs)
 
   def _build_groq_llm(
     self,
     response_format: str | dict | None,
     temperature: float | None,
     model_override: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_GROQ_AVAILABLE:
@@ -824,6 +1214,12 @@ class LLMFactory:
                                 os.getenv("LLM_STREAMING", "true")), True)
 
     model_kwargs = {"response_format": response_format} if response_format else {}
+    native_reasoning_effort = None
+    if reasoning_effort is not None:
+      resolution = resolve_reasoning_effort("groq", model_name, reasoning_effort)
+      if not resolution.supported:
+        raise ValueError(resolution.reason)
+      native_reasoning_effort = resolution.native_effort
 
     return ChatGroq(
       model_name=model_name,
@@ -831,6 +1227,7 @@ class LLMFactory:
       temperature=temperature if temperature is not None else 0,
       streaming=streaming,
       model_kwargs=model_kwargs,
+      reasoning_effort=native_reasoning_effort,
       **kwargs,
     )
 
@@ -839,6 +1236,7 @@ class LLMFactory:
     response_format: str | dict | None,
     temperature: float | None,
     model_override: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_OPENAI_AVAILABLE:
@@ -867,10 +1265,22 @@ class LLMFactory:
     logging.info(f"[LLM] OpenAI model={model_name} endpoint={base_url}")
 
     # --- GPT-5 support: Responses API + reasoning + streaming ---
-    use_responses = _as_bool(os.getenv("OPENAI_USE_RESPONSES"),
-                            (model_name or "").lower().startswith("gpt-5"))
+    use_responses = _as_bool(
+      os.getenv("OPENAI_USE_RESPONSES"),
+      (model_name or "").lower().startswith(("gpt-5", "gpt-6")),
+    )
 
-    reasoning_effort  = os.getenv("OPENAI_REASONING_EFFORT")   # low|medium|high
+    effort_resolution = (
+      resolve_reasoning_effort("openai", model_name, reasoning_effort)
+      if reasoning_effort is not None else None
+    )
+    if effort_resolution is not None and not effort_resolution.supported:
+      raise ValueError(effort_resolution.reason)
+    native_reasoning_effort = (
+      effort_resolution.native_effort
+      if effort_resolution is not None
+      else os.getenv("OPENAI_REASONING_EFFORT")
+    )
     reasoning_summary = os.getenv("OPENAI_REASONING_SUMMARY")  # auto|concise|detailed
     verbosity         = os.getenv("OPENAI_VERBOSITY")          # low|medium|high
     os.getenv("OPENAI_OUTPUT_VERSION", "responses/v1" if use_responses else "v0")
@@ -885,9 +1295,16 @@ class LLMFactory:
         model_kwargs["user"] = user
 
     extra_body: Dict[str, Any] = {}
-    if use_responses and (reasoning_effort or reasoning_summary):
+    if use_responses and (
+      (effort_resolution is None and native_reasoning_effort)
+      or reasoning_summary
+    ):
         extra_body["reasoning"] = {
-            **({"effort": reasoning_effort} if reasoning_effort else {}),
+            **(
+              {"effort": native_reasoning_effort}
+              if effort_resolution is None and native_reasoning_effort
+              else {}
+            ),
             **({"summary": reasoning_summary} if reasoning_summary else {}),
         }
 
@@ -905,9 +1322,11 @@ class LLMFactory:
         openai_kwargs["model_kwargs"] = model_kwargs
     if extra_body:
         openai_kwargs["extra_body"] = extra_body
+    if effort_resolution is not None:
+        openai_kwargs["reasoning_effort"] = native_reasoning_effort
 
     # Only set temperature when supported (GPT-5 doesn't support temperature=0.0)
-    if (model_name or "").lower().startswith("gpt-5"):
+    if (model_name or "").lower().startswith(("gpt-5", "gpt-6")):
         # For GPT-5 models, don't set temperature if it's 0.0 (use default)
         if temperature is not None and temperature != 0.0:
             openai_kwargs["temperature"] = temperature
@@ -937,6 +1356,7 @@ class LLMFactory:
     response_format: str | dict | None,
     temperature: float | None,
     model_override: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_GOOGLE_GENAI_AVAILABLE:
@@ -955,11 +1375,21 @@ class LLMFactory:
     logging.info(f"[LLM] Google Gemini model={model_name}")
 
     model_kwargs = {"response_format": response_format} if response_format else {}
+    thinking_args: Dict[str, Any] = {}
+    if reasoning_effort is not None:
+      resolution = resolve_reasoning_effort("google-gemini", model_name, reasoning_effort)
+      if not resolution.supported:
+        raise ValueError(resolution.reason)
+      if resolution.native_effort is not None:
+        thinking_args["thinking_level"] = resolution.native_effort
+      else:
+        thinking_args["thinking_budget"] = resolution.thinking_budget
     return ChatGoogleGenerativeAI(
       model=model_name,
       google_api_key=api_key,
       temperature=temperature if temperature is not None else 0,
       model_kwargs=model_kwargs,
+      **thinking_args,
       **kwargs,
     )
 
@@ -970,6 +1400,7 @@ class LLMFactory:
     response_format: str | dict | None,
     temperature: float | None,
     model_override: str | None = None,
+    reasoning_effort: ReasoningEffort | None = None,
     **kwargs,
   ):
     if not _LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE:
@@ -1008,13 +1439,30 @@ class LLMFactory:
     model_kwargs = {"response_format": response_format} if response_format else {}
 
     # Check for extended thinking configuration (Claude 4+ models on Vertex AI)
-    thinking_enabled = _as_bool(os.getenv("VERTEXAI_THINKING_ENABLED"), False)
+    effort_resolution = (
+      resolve_reasoning_effort("gcp-vertexai", model_name, reasoning_effort)
+      if reasoning_effort is not None else None
+    )
+    if effort_resolution is not None and not effort_resolution.supported:
+      raise ValueError(effort_resolution.reason)
+    thinking_enabled = effort_resolution is not None or _as_bool(os.getenv("VERTEXAI_THINKING_ENABLED"), False)
     thinking_budget = None
     if thinking_enabled:
       logging.info("[LLM] Extended thinking enabled for Vertex AI")
 
       max_tokens_limit = kwargs.get("max_tokens")
-      thinking_budget = _parse_thinking_budget("VERTEXAI_THINKING_BUDGET", max_tokens_limit)
+      thinking_budget = (
+        effort_resolution.thinking_budget
+        if effort_resolution is not None
+        else _parse_thinking_budget("VERTEXAI_THINKING_BUDGET", max_tokens_limit)
+      )
+      if thinking_budget is not None and _claude_supports_manual_thinking(model_name):
+        thinking_budget = _clamp_claude_thinking_budget(
+          thinking_budget,
+          max_tokens_limit,
+        )
+      elif max_tokens_limit and thinking_budget is not None and thinking_budget > max_tokens_limit:
+        thinking_budget = max_tokens_limit
       logging.info(f"[LLM] Extended thinking configured with thinking_budget={thinking_budget}")
 
     # Build ChatVertexAI args - don't pass max_tokens as both explicit param and in kwargs
@@ -1032,6 +1480,8 @@ class LLMFactory:
     # Add thinking_budget as explicit parameter (not in model_kwargs to avoid warning)
     if thinking_budget is not None:
       vertexai_args["thinking_budget"] = thinking_budget
+    elif effort_resolution is not None and effort_resolution.native_effort is not None:
+      model_kwargs["thinking_level"] = effort_resolution.native_effort
 
     # Add kwargs except max_tokens which we set explicitly
     filtered_kwargs = {k: v for k, v in kwargs.items() if k != "max_tokens"}

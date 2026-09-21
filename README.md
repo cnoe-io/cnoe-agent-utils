@@ -30,6 +30,7 @@
     - 🤖 OpenAI
     - 🤖 Groq
 * Simple, environment-variable-driven configuration.
+* Portable per-request reasoning effort (`low`, `medium`, `high`, or `max`) for supported models.
 * Example scripts for each LLM provider with setup instructions.
 
 ### **Agent Tracing (since v0.2.0)**
@@ -161,6 +162,37 @@ uv sync
 ---
 
 ## 🧑‍💻 Usage
+
+### Reasoning effort
+
+Supported reasoning models accept one portable setting across providers:
+
+```python
+llm = LLMFactory("openai").get_llm(
+    model="gpt-5.5",
+    reasoning_effort="high",
+)
+```
+
+The factory maps `max` to the strongest level supported by the selected model.
+An explicit argument takes precedence over the existing provider environment
+variables. Omitting it preserves the current environment-driven behavior.
+Custom deployment aliases can be described with
+`LLM_REASONING_EFFORT_MAP_JSON`; keys use `provider:model-prefix` and the
+longest prefix wins. This is the forward-compatibility path for private aliases
+and newly released models, while unknown models remain disabled by default so
+the factory never guesses at an unsupported provider parameter:
+
+```bash
+export LLM_REASONING_EFFORT_MAP_JSON='{
+  "openai:gpt-next": {
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "max": "xhigh"
+  }
+}'
+```
 
 To test integration with different LLM providers, configure the required environment variables for each provider as shown below. Then, run the corresponding example script using `uv`.
 

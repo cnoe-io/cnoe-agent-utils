@@ -57,10 +57,16 @@ class TestThinkingBudgetParsing:
       assert budget == THINKING_MIN_BUDGET
 
   def test_budget_above_max_tokens(self):
-    """Test that budget is clamped to max_tokens when provided."""
+    """Test that budget stays strictly below max_tokens when provided."""
     with patch.dict(os.environ, {"TEST_BUDGET": "10000"}):
       budget = _parse_thinking_budget("TEST_BUDGET", max_tokens=8000)
-      assert budget == 8000
+      assert budget == 7999
+
+  def test_max_tokens_must_leave_room_for_minimum_budget(self):
+    """Test that an invalid total output limit fails before the API call."""
+    with patch.dict(os.environ, {"TEST_BUDGET": "1024"}):
+      with pytest.raises(ValueError, match="max_tokens must be greater than 1024"):
+        _parse_thinking_budget("TEST_BUDGET", max_tokens=1024)
 
   def test_budget_below_max_tokens(self):
     """Test that budget is not clamped when below max_tokens."""
@@ -132,7 +138,7 @@ class TestBedrockExtendedThinking:
       assert thinking["budget_tokens"] == THINKING_DEFAULT_BUDGET
 
   def test_thinking_budget_clamped_to_max_tokens(self):
-    """Test that thinking budget is clamped to max_tokens."""
+    """Test that thinking budget stays below max_tokens."""
     factory = LLMFactory("aws-bedrock")
 
     with patch.dict(
@@ -150,7 +156,7 @@ class TestBedrockExtendedThinking:
       llm = factory._build_aws_bedrock_llm(None, 0.0, max_tokens=8000)
       thinking = _get_thinking_config(llm)
       assert thinking is not None
-      assert thinking["budget_tokens"] == 8000
+      assert thinking["budget_tokens"] == 7999
 
   def test_thinking_preserved_with_response_format(self):
     """Test that thinking config is preserved when response_format is also set (bug fix)."""
@@ -231,7 +237,7 @@ class TestAnthropicExtendedThinking:
       assert llm.model_kwargs["thinking_budget"] == THINKING_DEFAULT_BUDGET
 
   def test_thinking_budget_clamped_to_max_tokens(self):
-    """Test that thinking budget is clamped to max_tokens."""
+    """Test that thinking budget stays below max_tokens."""
     factory = LLMFactory("anthropic-claude")
 
     with patch.dict(
@@ -245,10 +251,10 @@ class TestAnthropicExtendedThinking:
       clear=False,
     ):
       llm = factory._build_anthropic_claude_llm(None, 0.0, max_tokens=10000)
-      # Verify thinking budget was clamped to max_tokens
+      # Claude requires the thinking budget to be strictly below max_tokens.
       assert hasattr(llm, "model_kwargs")
       assert "thinking_budget" in llm.model_kwargs
-      assert llm.model_kwargs["thinking_budget"] == 10000
+      assert llm.model_kwargs["thinking_budget"] == 9999
 
 
 class TestVertexAIExtendedThinking:
@@ -317,7 +323,7 @@ class TestVertexAIExtendedThinking:
         assert llm.thinking_budget == THINKING_DEFAULT_BUDGET
 
   def test_thinking_budget_clamped_to_max_tokens(self):
-    """Test that thinking budget is clamped to max_tokens."""
+    """Test that thinking budget stays below max_tokens."""
     factory = LLMFactory("gcp-vertexai")
 
     with patch.dict(
@@ -335,7 +341,7 @@ class TestVertexAIExtendedThinking:
       with patch("google.auth.default", return_value=(None, None)):
         llm = factory._build_gcp_vertexai_llm(None, 0.0, max_tokens=10000)
         assert hasattr(llm, "thinking_budget")
-        assert llm.thinking_budget == 10000
+        assert llm.thinking_budget == 9999
 
 
 class TestThinkingConfigType:

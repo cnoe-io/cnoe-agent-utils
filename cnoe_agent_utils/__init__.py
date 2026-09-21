@@ -1,4 +1,12 @@
-from .llm_factory import LLMFactory, resolve_bedrock_client, uses_anthropic_bedrock_client
+from .llm_factory import (
+    LLMFactory,
+    REASONING_EFFORTS,
+    ReasoningEffort,
+    ReasoningEffortResolution,
+    resolve_bedrock_client,
+    resolve_reasoning_effort,
+    uses_anthropic_bedrock_client,
+)
 
 # Import tracing utilities (always available since langfuse is now a standard dependency)
 from .tracing import TracingManager, trace_agent_stream, disable_a2a_tracing, is_a2a_disabled
@@ -37,7 +45,11 @@ except ImportError:
 __all__ = [
     # Core utilities
     'LLMFactory',
+    'REASONING_EFFORTS',
+    'ReasoningEffort',
+    'ReasoningEffortResolution',
     'resolve_bedrock_client',
+    'resolve_reasoning_effort',
     'uses_anthropic_bedrock_client',
     'TracingManager',
     'trace_agent_stream',
