@@ -1,3 +1,9 @@
+## 0.5.0 (2026-09-22)
+
+### Feat
+
+- **llm**: add portable reasoning effort across supported providers (#43)
+
 ## 0.4.2 (2026-09-03)
 
 ### Fix
