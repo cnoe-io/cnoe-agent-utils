@@ -190,6 +190,54 @@ def test_gemini_25_uses_documented_thinking_budget():
     assert client.call_args.kwargs["thinking_budget"] == 8192
 
 
+@patch("cnoe_agent_utils.llm_factory._LANGCHAIN_GOOGLE_GENAI_AVAILABLE", True)
+def test_gemini_3_uses_native_thinking_level():
+    client = MagicMock()
+    environment = {
+        "GOOGLE_API_KEY": "test-key",
+        "GOOGLE_GEMINI_MODEL_NAME": "gemini-3.1-pro-preview",
+    }
+    with (
+        patch.dict(os.environ, environment, clear=True),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI", client),
+    ):
+        LLMFactory("google-gemini")._build_google_gemini_llm(
+            None,
+            0.0,
+            reasoning_effort="max",
+        )
+
+    assert client.call_args.kwargs["thinking_level"] == "high"
+
+
+@patch("cnoe_agent_utils.llm_factory._LANGCHAIN_GOOGLE_VERTEXAI_AVAILABLE", True)
+@patch("cnoe_agent_utils.llm_factory._LANGCHAIN_GOOGLE_GENAI_AVAILABLE", True)
+def test_vertex_gemini_3_uses_genai_client_for_thinking_level():
+    genai_client = MagicMock()
+    vertex_client = MagicMock()
+    credentials = MagicMock()
+    environment = {
+        "GOOGLE_CLOUD_PROJECT": "test-project",
+        "GOOGLE_CLOUD_LOCATION": "us-central1",
+        "VERTEXAI_MODEL_NAME": "gemini-3.1-pro-preview",
+    }
+    with (
+        patch.dict(os.environ, environment, clear=True),
+        patch("google.auth.default", return_value=(credentials, "test-project")),
+        patch("langchain_google_genai.ChatGoogleGenerativeAI", genai_client),
+        patch("langchain_google_vertexai.ChatVertexAI", vertex_client),
+    ):
+        LLMFactory("gcp-vertexai")._build_gcp_vertexai_llm(
+            None,
+            0.0,
+            reasoning_effort="max",
+        )
+
+    vertex_client.assert_not_called()
+    assert genai_client.call_args.kwargs["vertexai"] is True
+    assert genai_client.call_args.kwargs["thinking_level"] == "high"
+
+
 @patch("cnoe_agent_utils.llm_factory._LANGCHAIN_GROQ_AVAILABLE", True)
 def test_groq_uses_native_reasoning_effort():
     client = MagicMock()

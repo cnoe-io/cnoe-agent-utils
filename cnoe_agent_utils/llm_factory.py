@@ -1465,6 +1465,35 @@ class LLMFactory:
         thinking_budget = max_tokens_limit
       logging.info(f"[LLM] Extended thinking configured with thinking_budget={thinking_budget}")
 
+    # ChatVertexAI 3.2.x has no thinking_level field, so Gemini 3 effort would
+    # otherwise be silently discarded. The unified Google GenAI client supports
+    # Gemini on Vertex AI and serializes thinking_level into ThinkingConfig.
+    if "gemini-3" in model_name.lower() and effort_resolution is not None:
+      if not _LANGCHAIN_GOOGLE_GENAI_AVAILABLE:
+        raise ImportError(
+          "Gemini 3 on Vertex AI requires langchain-google-genai. "
+          "Install with: pip install 'cnoe-agent-utils[gcp]'"
+        )
+      from langchain_google_genai import ChatGoogleGenerativeAI
+
+      genai_args = {
+        "model": model_name,
+        "vertexai": True,
+        "project": project_id,
+        "location": location,
+        "credentials": credentials,
+        "temperature": temperature if temperature is not None else 0,
+        "max_retries": 6,
+        "stop": None,
+        "model_kwargs": model_kwargs,
+        "thinking_level": effort_resolution.native_effort,
+      }
+      max_tokens_value = kwargs.get("max_tokens")
+      if max_tokens_value is not None:
+        genai_args["max_output_tokens"] = max_tokens_value
+      filtered_kwargs = {k: v for k, v in kwargs.items() if k != "max_tokens"}
+      return ChatGoogleGenerativeAI(**genai_args, **filtered_kwargs)
+
     # Build ChatVertexAI args - don't pass max_tokens as both explicit param and in kwargs
     vertexai_args = {
       "model": model_name,
