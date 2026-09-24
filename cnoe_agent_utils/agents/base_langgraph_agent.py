@@ -31,7 +31,7 @@ import tiktoken
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-from .context_config import get_context_limit_for_provider, get_min_messages_to_keep, is_auto_compression_enabled
+from .context_config import get_context_limit_for_model, get_min_messages_to_keep, is_auto_compression_enabled
 
 
 logger = logging.getLogger(__name__)
@@ -103,15 +103,14 @@ class BaseLangGraphAgent(ABC):
             # Fallback to cl100k_base (used by GPT-4/3.5)
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
 
-        # Get context management configuration from global config
-        llm_provider = os.getenv("LLM_PROVIDER", "azure-openai").lower()
-        self.max_context_tokens = get_context_limit_for_provider(llm_provider)
+        # Get context management configuration, derived from the constructed
+        # model's own advertised context window rather than a per-provider guess.
+        self.max_context_tokens = get_context_limit_for_model(self.model)
         self.min_messages_to_keep = get_min_messages_to_keep()
         self.enable_auto_compression = is_auto_compression_enabled()
 
         logger.info(
-            f"Context management initialized for provider={llm_provider}: "
-            f"max_tokens={self.max_context_tokens:,}, "
+            f"Context management initialized: max_tokens={self.max_context_tokens:,}, "
             f"min_messages={self.min_messages_to_keep}, "
             f"auto_compression={self.enable_auto_compression}"
         )

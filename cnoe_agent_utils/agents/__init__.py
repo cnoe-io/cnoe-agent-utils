@@ -5,11 +5,9 @@
 
 # Context configuration utilities
 from .context_config import (
-    get_context_limit_for_provider,
+    get_context_limit_for_model,
     get_min_messages_to_keep,
     is_auto_compression_enabled,
-    get_context_config,
-    log_context_config,
 )
 
 # Base agent classes (imported conditionally based on available dependencies)
@@ -30,11 +28,9 @@ except ImportError:
 # Export what's available
 __all__ = [
     # Context config (always available)
-    "get_context_limit_for_provider",
+    "get_context_limit_for_model",
     "get_min_messages_to_keep",
     "is_auto_compression_enabled",
-    "get_context_config",
-    "log_context_config",
 ]
 
 # Add LangGraph classes if available

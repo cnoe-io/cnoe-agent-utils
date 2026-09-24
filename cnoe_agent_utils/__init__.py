@@ -18,11 +18,9 @@ from .utils import Spinner, stream_with_spinner, invoke_with_spinner, time_llm_o
 try:
     from .agents import (
         # Context configuration (always available)
-        get_context_limit_for_provider, # noqa: F401
+        get_context_limit_for_model, # noqa: F401
         get_min_messages_to_keep, # noqa: F401
         is_auto_compression_enabled, # noqa: F401
-        get_context_config, # noqa: F401
-        log_context_config, # noqa: F401
     )
     _AGENTS_BASE_AVAILABLE = True
 except ImportError:
@@ -64,11 +62,9 @@ __all__ = [
 # Add agent context configuration if available
 if _AGENTS_BASE_AVAILABLE:
     __all__.extend([
-        'get_context_limit_for_provider',
+        'get_context_limit_for_model',
         'get_min_messages_to_keep',
         'is_auto_compression_enabled',
-        'get_context_config',
-        'log_context_config',
     ])
 
 # Add LangGraph classes if available

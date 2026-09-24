@@ -130,50 +130,32 @@ executor = MyAgentExecutor()
 
 ## Context Configuration
 
-The agents module includes sophisticated context management:
+The agents module derives its context-window limit from the LLM instance
+itself, not a hand-maintained per-provider table. Every supported chat model
+(`langchain-aws`, `langchain-anthropic`, `langchain-openai`,
+`langchain-google-genai`/`vertexai`, `langchain-groq`) resolves a `.profile`
+dict from its own model catalog, so the limit always matches the model
+actually configured - including new model releases, with no code change here:
 
 ```python
-from cnoe_agent_utils.agents import (
-    get_context_limit_for_provider,
-    get_min_messages_to_keep,
-    is_auto_compression_enabled,
-    get_context_config,
-    log_context_config
-)
+from cnoe_agent_utils.agents import get_context_limit_for_model
 
-# Get context limit for current LLM provider
-max_tokens = get_context_limit_for_provider("aws-bedrock")  # 150,000 tokens
-
-# Get complete configuration
-config = get_context_config()
-print(config)
-# {
-#     'provider': 'aws-bedrock',
-#     'max_context_tokens': 150000,
-#     'min_messages_to_keep': 10,
-#     'auto_compression_enabled': True
-# }
-
-log_context_config()  # Logs current configuration
+# 85% of the model's advertised max_input_tokens, or a generic fallback
+# if the model has no resolvable profile (e.g. Strands models, which
+# aren't LangChain BaseChatModels).
+max_tokens = get_context_limit_for_model(llm)
 ```
+
+`BaseLangGraphAgent` calls this automatically with its constructed model.
+`BaseStrandsAgent` calls it with `None`, since Strands models don't expose a
+LangChain `.profile`, and gets the generic fallback (200,000 tokens).
 
 ## Environment Variables
 
 ### Context Management
 
-- `LLM_PROVIDER`: Provider name (e.g., "aws-bedrock", "azure-openai")
-- `MAX_CONTEXT_TOKENS`: Global context limit override
 - `MIN_MESSAGES_TO_KEEP`: Minimum recent messages to preserve (default: 10)
 - `ENABLE_AUTO_COMPRESSION`: Enable automatic message trimming (default: true)
-
-### Provider-Specific Context Limits
-
-- `AWS_BEDROCK_MAX_CONTEXT_TOKENS`: Override for AWS Bedrock
-- `AZURE_OPENAI_MAX_CONTEXT_TOKENS`: Override for Azure OpenAI
-- `OPENAI_MAX_CONTEXT_TOKENS`: Override for OpenAI
-- `ANTHROPIC_MAX_CONTEXT_TOKENS`: Override for Anthropic Claude
-- `GOOGLE_GEMINI_MAX_CONTEXT_TOKENS`: Override for Google Gemini
-- `GCP_VERTEXAI_MAX_CONTEXT_TOKENS`: Override for GCP Vertex AI
 
 ### Agent Behavior
 
@@ -223,7 +205,7 @@ The context management system automatically:
 - Counts tokens in conversation history
 - Trims old messages when approaching limits
 - Preserves system messages and recent conversation
-- Provides configurable safety margins per LLM provider
+- Derives its safety margin from the configured model's own advertised context window
 
 ### Optional Dependencies
 

@@ -5,110 +5,65 @@
 
 import logging
 import os
-from typing import Dict
+from collections.abc import Mapping
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Default context limits per provider (conservative with 20-30% safety margin)
-# These values leave room for tool definitions and response generation
-DEFAULT_PROVIDER_CONTEXT_LIMITS: Dict[str, int] = {
-    "azure-openai": 100000,     # GPT-4o: 128K tokens, use 100K for safety (22% margin)
-    "openai": 100000,           # GPT-4: 128K-200K depending on model, use 100K
-    "aws-bedrock": 150000,      # Claude Sonnet 4.5: 200K tokens, use 150K (25% margin)
-    "anthropic-claude": 150000, # Claude 3/4: 200K tokens, use 150K (25% margin)
-    "google-gemini": 800000,    # Gemini 2.0: 1M-2M tokens, use 800K (20% margin)
-    "gcp-vertexai": 150000,     # Varies by model, conservative default
-}
+# Safety margin applied to a model's advertised input window, leaving room
+# for tool definitions and response generation.
+DEFAULT_CONTEXT_LIMIT_FRACTION = 0.85
 
-# Environment variable mappings for provider-specific overrides
-PROVIDER_ENV_VARS: Dict[str, str] = {
-    "azure-openai": "AZURE_OPENAI_MAX_CONTEXT_TOKENS",
-    "openai": "OPENAI_MAX_CONTEXT_TOKENS",
-    "aws-bedrock": "AWS_BEDROCK_MAX_CONTEXT_TOKENS",
-    "anthropic-claude": "ANTHROPIC_MAX_CONTEXT_TOKENS",
-    "google-gemini": "GOOGLE_GEMINI_MAX_CONTEXT_TOKENS",
-    "gcp-vertexai": "GCP_VERTEXAI_MAX_CONTEXT_TOKENS",
-}
+# Used only when a model has no resolvable profile (e.g. a Bedrock
+# application-inference-profile ARN with no GetInferenceProfile permission,
+# or a Strands model that isn't a LangChain BaseChatModel at all).
+DEFAULT_CONTEXT_LIMIT_FALLBACK = 200_000
 
 
-def get_context_limit_for_provider(provider: str = None) -> int:
+def get_context_limit_for_model(
+    model: Any,
+    *,
+    fraction: float = DEFAULT_CONTEXT_LIMIT_FRACTION,
+    fallback: int = DEFAULT_CONTEXT_LIMIT_FALLBACK,
+) -> int:
     """
-    Get the context token limit for a specific LLM provider.
+    Get the context token limit for a specific chat model instance.
 
-    Priority order:
-    1. Provider-specific environment variable (e.g., AWS_BEDROCK_MAX_CONTEXT_TOKENS)
-    2. Global override environment variable (MAX_CONTEXT_TOKENS)
-    3. Default limit for the provider
-    4. Fallback default (100000)
+    Reads `model.profile["max_input_tokens"]`, populated by LangChain/partner
+    packages (langchain-aws, langchain-anthropic, langchain-openai, etc.) from
+    their own model catalogs, so the limit always matches the model actually
+    configured instead of a hand-maintained per-provider guess.
 
     Args:
-        provider: LLM provider name (e.g., "aws-bedrock", "azure-openai")
-                 If None, uses LLM_PROVIDER environment variable
+        model: A LangChain chat model instance (or `None`/anything without a
+            resolvable `.profile`, in which case `fallback` is used).
+        fraction: Safety margin applied to `max_input_tokens`.
+        fallback: Value to use when no profile is available.
 
     Returns:
-        Context token limit as integer
+        Context token limit as integer.
 
     Examples:
-        >>> # Using default for azure-openai
-        >>> get_context_limit_for_provider("azure-openai")
-        100000
+        >>> from langchain_anthropic import ChatAnthropic
+        >>> get_context_limit_for_model(ChatAnthropic(model="claude-sonnet-4-5"))
+        170000
 
-        >>> # With provider-specific override
-        >>> os.environ["AWS_BEDROCK_MAX_CONTEXT_TOKENS"] = "180000"
-        >>> get_context_limit_for_provider("aws-bedrock")
-        180000
-
-        >>> # With global override
-        >>> os.environ["MAX_CONTEXT_TOKENS"] = "120000"
-        >>> get_context_limit_for_provider("azure-openai")
-        120000
+        >>> get_context_limit_for_model(None)
+        200000
     """
-    # Get provider from environment if not specified
-    if provider is None:
-        provider = os.getenv("LLM_PROVIDER", "azure-openai")
-
-    provider = provider.lower()
-
-    # 1. Check provider-specific environment variable
-    provider_env_var = PROVIDER_ENV_VARS.get(provider)
-    if provider_env_var:
-        provider_specific_limit = os.getenv(provider_env_var)
-        if provider_specific_limit:
-            try:
-                limit = int(provider_specific_limit)
-                logger.info(
-                    f"Using provider-specific context limit from {provider_env_var}: "
-                    f"{limit:,} tokens"
-                )
-                return limit
-            except ValueError:
-                logger.warning(
-                    f"Invalid value for {provider_env_var}='{provider_specific_limit}', "
-                    "falling back to next priority"
-                )
-
-    # 2. Check global override environment variable
-    global_override = os.getenv("MAX_CONTEXT_TOKENS")
-    if global_override:
-        try:
-            limit = int(global_override)
+    profile = getattr(model, "profile", None)
+    if isinstance(profile, Mapping):
+        max_input_tokens = profile.get("max_input_tokens")
+        if isinstance(max_input_tokens, int) and not isinstance(max_input_tokens, bool) and max_input_tokens > 0:
+            limit = max(1, int(max_input_tokens * fraction))
             logger.info(
-                f"Using global context limit override from MAX_CONTEXT_TOKENS: "
-                f"{limit:,} tokens"
+                f"Using model profile context limit: {limit:,} tokens "
+                f"({fraction:.0%} of {max_input_tokens:,} max_input_tokens)"
             )
             return limit
-        except ValueError:
-            logger.warning(
-                f"Invalid value for MAX_CONTEXT_TOKENS='{global_override}', "
-                "falling back to default"
-            )
 
-    # 3. Use default limit for the provider
-    default_limit = DEFAULT_PROVIDER_CONTEXT_LIMITS.get(provider, 100000)
-    logger.debug(
-        f"Using default context limit for provider={provider}: {default_limit:,} tokens"
-    )
-    return default_limit
+    logger.debug(f"No resolvable model profile; using fallback context limit: {fallback:,} tokens")
+    return fallback
 
 
 def get_min_messages_to_keep() -> int:
@@ -136,34 +91,3 @@ def is_auto_compression_enabled() -> bool:
         True if enabled (default), False otherwise
     """
     return os.getenv("ENABLE_AUTO_COMPRESSION", "true").lower() == "true"
-
-
-def get_context_config() -> Dict[str, any]:
-    """
-    Get complete context management configuration.
-
-    Returns:
-        Dictionary with:
-        - provider: LLM provider name
-        - max_context_tokens: Token limit for the provider
-        - min_messages_to_keep: Minimum messages to preserve
-        - auto_compression_enabled: Whether auto-compression is enabled
-    """
-    provider = os.getenv("LLM_PROVIDER", "azure-openai").lower()
-    return {
-        "provider": provider,
-        "max_context_tokens": get_context_limit_for_provider(provider),
-        "min_messages_to_keep": get_min_messages_to_keep(),
-        "auto_compression_enabled": is_auto_compression_enabled(),
-    }
-
-
-def log_context_config():
-    """Log the current context management configuration."""
-    config = get_context_config()
-    logger.info(
-        f"Context management config: provider={config['provider']}, "
-        f"max_tokens={config['max_context_tokens']:,}, "
-        f"min_messages={config['min_messages_to_keep']}, "
-        f"auto_compression={config['auto_compression_enabled']}"
-    )

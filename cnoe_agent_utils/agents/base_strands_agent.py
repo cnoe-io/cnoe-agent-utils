@@ -22,7 +22,7 @@ except ImportError:
     class MCPClient:
         pass
 
-from .context_config import get_context_limit_for_provider
+from .context_config import get_context_limit_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +69,11 @@ class BaseStrandsAgent(ABC):
         self._mcp_contexts: List[Any] = []
         self._tools: List[Any] = []
 
-        # Get context management configuration from global config
-        # Strands manages conversation state internally, but we track limits for monitoring
-        llm_provider = os.getenv("LLM_PROVIDER", "aws-bedrock").lower()
-        self.max_context_tokens = get_context_limit_for_provider(llm_provider)
+        # Strands manages conversation state internally and its Model classes
+        # (e.g. BedrockModel) aren't LangChain BaseChatModels, so there's no
+        # `.profile` to read here - this is the generic fallback limit, tracked
+        # for monitoring only.
+        self.max_context_tokens = get_context_limit_for_model(None)
         self.message_count = 0  # Track conversation length
 
         # Set up logging
@@ -82,7 +83,7 @@ class BaseStrandsAgent(ABC):
 
         logger.info(
             f"Initializing {self.get_agent_name()} agent (Strands-based) - "
-            f"provider={llm_provider}, max_context_tokens={self.max_context_tokens:,}"
+            f"max_context_tokens={self.max_context_tokens:,}"
         )
 
         # Initialize MCP clients and agent
