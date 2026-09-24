@@ -7,24 +7,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "a2a-sdk"
-version = "1.1.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "google-api-core" },
-    { name = "googleapis-common-protos" },
-    { name = "httpx" },
-    { name = "json-rpc" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/75/b3/db19deba777c2ac8d963d2d0c123023730502d21c62b725eb4bdcb351c33/a2a_sdk-1.1.5.tar.gz", hash = "sha256:f81837f86a9bbb3ed4909539be642d61e8539ce8300a6578fa71dc901ee65b97", size = 402715, upload-time = "2026-09-21T09:52:26.352Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/91/087e4281bae91e19c4bb0736dc0807725e2e1f641dcc1ac86e625137c32c/a2a_sdk-1.1.5-py3-none-any.whl", hash = "sha256:c1d63d36b79a097c62dd9be001fce21d5939f5a811a9c5afd0ba8082f13f68bf", size = 255110, upload-time = "2026-09-21T09:52:24.741Z" },
-]
-
-[[package]]
 name = "annotated-types"
 version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -381,7 +363,7 @@ wheels = [
 
 [[package]]
 name = "cnoe-agent-utils"
-version = "0.5.1"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
@@ -405,16 +387,12 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-a2a = [
-    { name = "a2a-sdk" },
-]
 agents = [
     { name = "pydantic" },
     { name = "tiktoken" },
     { name = "typing-extensions" },
 ]
 agents-all = [
-    { name = "a2a-sdk" },
     { name = "langchain-core" },
     { name = "langchain-mcp-adapters" },
     { name = "langgraph" },
@@ -503,8 +481,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "==1.1.5" },
-    { name = "a2a-sdk", marker = "extra == 'agents-all'", specifier = "==1.1.5" },
     { name = "boto3", specifier = "==1.43.101" },
     { name = "boto3", marker = "extra == 'aws'", specifier = "==1.43.101" },
     { name = "botocore", specifier = "==1.43.101" },
@@ -560,7 +536,7 @@ requires-dist = [
     { name = "typing-extensions", marker = "extra == 'agents'", specifier = "==4.16.0" },
     { name = "typing-extensions", marker = "extra == 'agents-all'", specifier = "==4.16.0" },
 ]
-provides-extras = ["anthropic", "dev", "openai", "azure", "aws", "tracing", "gcp", "agents", "langgraph", "strands", "a2a", "agents-all", "groq"]
+provides-extras = ["anthropic", "dev", "openai", "azure", "aws", "tracing", "gcp", "agents", "langgraph", "strands", "agents-all", "groq"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1275,15 +1251,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d3/59/322338183ecda247fb5d1763a6cbe46eff7222eaeebafd9fa65d4bf5cb11/jmespath-1.1.0.tar.gz", hash = "sha256:472c87d80f36026ae83c6ddd0f1d05d4e510134ed462851fd5f754c8c3cbb88d", size = 27377, upload-time = "2026-01-22T16:35:26.279Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/2f/967ba146e6d58cf6a652da73885f52fc68001525b4197effc174321d70b4/jmespath-1.1.0-py3-none-any.whl", hash = "sha256:a5663118de4908c91729bea0acadca56526eb2698e83de10cd116ae0f4e97c64", size = 20419, upload-time = "2026-01-22T16:35:24.919Z" },
-]
-
-[[package]]
-name = "json-rpc"
-version = "1.15.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6d/9e/59f4a5b7855ced7346ebf40a2e9a8942863f644378d956f68bcef2c88b90/json-rpc-1.15.0.tar.gz", hash = "sha256:e6441d56c1dcd54241c937d0a2dcd193bdf0bdc539b5316524713f554b7f85b9", size = 28854, upload-time = "2023-06-11T09:45:49.078Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/9e/820c4b086ad01ba7d77369fb8b11470a01fac9b4977f02e18659cf378b6b/json_rpc-1.15.0-py2.py3-none-any.whl", hash = "sha256:4a4668bbbe7116feb4abbd0f54e64a4adcf4b8f648f19ffa0848ad0f6606a9bf", size = 39450, upload-time = "2023-06-11T09:45:47.136Z" },
 ]
 
 [[package]]

@@ -5,7 +5,6 @@ This module provides base classes and utilities for building CNOE agents with di
 ## Features
 
 - **Framework Support**: Base classes for LangGraph and Strands agent frameworks
-- **A2A Protocol Integration**: Seamless integration with A2A (Agent-to-Agent) protocol for agent execution
 - **Context Management**: Automatic context window management with token counting and message trimming
 - **Streaming Support**: Built-in streaming capabilities for real-time agent responses
 - **Optional Dependencies**: Graceful handling of missing dependencies with informative error messages
@@ -30,12 +29,6 @@ pip install cnoe-agent-utils[langgraph]
 pip install cnoe-agent-utils[strands]
 ```
 
-### A2A Protocol Support
-
-```bash
-pip install cnoe-agent-utils[a2a]
-```
-
 ### All Agent Features
 
 ```bash
@@ -47,7 +40,7 @@ pip install cnoe-agent-utils[agents-all]
 ### LangGraph Agent
 
 ```python
-from cnoe_agent_utils.agents import BaseLangGraphAgent, BaseLangGraphAgentExecutor
+from cnoe_agent_utils.agents import BaseLangGraphAgent
 from pydantic import BaseModel
 
 class ResponseFormat(BaseModel):
@@ -88,7 +81,7 @@ async for response in agent.stream("Hello!", "session-123"):
 ### Strands Agent
 
 ```python
-from cnoe_agent_utils.agents import BaseStrandsAgent, BaseStrandsAgentExecutor
+from cnoe_agent_utils.agents import BaseStrandsAgent
 from strands.tools.mcp import MCPClient
 from typing import List, Tuple
 
@@ -112,20 +105,6 @@ class MyStrandsAgent(BaseStrandsAgent):
 agent = MyStrandsAgent()
 response = agent.chat("Hello!")
 print(response['answer'])
-```
-
-### A2A Agent Executor
-
-```python
-from cnoe_agent_utils.agents import BaseLangGraphAgentExecutor
-
-class MyAgentExecutor(BaseLangGraphAgentExecutor):
-    def __init__(self):
-        super().__init__(MyAgent())
-
-# Usage with A2A protocol
-executor = MyAgentExecutor()
-# executor.execute(context, event_queue) - used by A2A framework
 ```
 
 ## Context Configuration
@@ -184,20 +163,10 @@ LangChain `.profile`, and gets the generic fallback (200,000 tokens).
    - Automatic context management with token counting
    - Support for both stdio and HTTP MCP modes
 
-2. **BaseLangGraphAgentExecutor**: A2A protocol executor for LangGraph agents
-   - Bridges agent streaming to A2A event queue
-   - Handles task state transitions (working → completed)
-   - Tool call notifications and status updates
-
-3. **BaseStrandsAgent**: Abstract base for Strands-based agents
+2. **BaseStrandsAgent**: Abstract base for Strands-based agents
    - Multi-server MCP support with parallel initialization
    - Conversation state management
    - Async streaming and sync chat interfaces
-
-4. **BaseStrandsAgentExecutor**: A2A protocol executor for Strands agents
-   - Converts sync Strands streaming to async A2A events
-   - Error handling and resource cleanup
-   - Task cancellation support
 
 ### Context Management
 
@@ -213,7 +182,6 @@ The module gracefully handles missing dependencies:
 - Core utilities (context config) always available
 - LangGraph classes only available if `langgraph` installed
 - Strands classes only available if `strands` installed
-- A2A executors only available if `a2a-sdk` installed
 
 ## Examples
 
@@ -221,7 +189,6 @@ See the `examples/` directory for complete working examples:
 
 - `examples/langgraph_agent.py` - Complete LangGraph agent implementation
 - `examples/strands_agent.py` - Complete Strands agent implementation
-- `examples/a2a_integration.py` - A2A protocol integration examples
 - `examples/context_management.py` - Context management examples
 
 ## Contributing

@@ -1,7 +1,7 @@
 # Copyright 2025 CNOE
 # SPDX-License-Identifier: Apache-2.0
 
-"""Base agent class providing common A2A functionality with streaming support."""
+"""Base agent class providing common LangGraph agent functionality with streaming support."""
 
 import json
 import logging
@@ -50,8 +50,8 @@ for log_name in ["httpx", "mcp.server.streamable_http", "mcp.server.streamable_h
     logging.getLogger(log_name).setLevel(logging.WARNING)
     logging.getLogger(log_name).propagate = False
 
-# Suppress noisy A2A SDK warnings (queue closed, artifact append issues)
-for log_name in ["sse_starlette.sse", "a2a.server.events.event_queue", "a2a.utils.helpers"]:
+# Suppress noisy SSE warnings (queue closed, artifact append issues)
+for log_name in ["sse_starlette.sse"]:
     logging.getLogger(log_name).setLevel(logging.ERROR)
     logging.getLogger(log_name).propagate = False
 
@@ -69,7 +69,7 @@ memory = MemorySaver()
 
 class BaseLangGraphAgent(ABC):
     """
-    Abstract base class for LangGraph-based A2A agents with streaming support.
+    Abstract base class for LangGraph-based agents with streaming support.
 
     Provides common functionality for:
     - LLM initialization

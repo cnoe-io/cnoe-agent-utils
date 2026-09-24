@@ -1,7 +1,7 @@
 # Copyright 2025 CNOE
 # SPDX-License-Identifier: Apache-2.0
 
-"""Base agent class for Strands-based agents with A2A protocol support."""
+"""Base agent class for Strands-based agents."""
 
 import asyncio
 import logging
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class BaseStrandsAgent(ABC):
     """
-    Abstract base class for Strands-based agents with A2A protocol support.
+    Abstract base class for Strands-based agents.
 
     Provides common functionality for:
     - MCP client lifecycle management

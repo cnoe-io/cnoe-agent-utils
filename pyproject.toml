@@ -1,6 +1,6 @@
 [project]
 name = "cnoe-agent-utils"
-version = "0.5.1"
+version = "0.6.0"
 description = "Core utilities for CNOE agents including LLM factory, tracing, and base agent classes"
 authors = [
     {name = "CNOE Contributors", email = "cnoe-steering@googlegroups.com"}
@@ -107,11 +107,6 @@ strands = [
     "strands==0.1.0",
 ]
 
-# A2A protocol dependencies for agent executors
-a2a = [
-    "a2a-sdk==1.1.5",
-]
-
 # Complete agent stack (all agent frameworks)
 agents-all = [
     "pydantic==2.13.5",
@@ -121,7 +116,6 @@ agents-all = [
     "langchain-core==1.6.5",
     "langchain-mcp-adapters==0.3.2",
     "strands==0.1.0",
-    "a2a-sdk==1.1.5",
 ]
 
 # Groq dependencies

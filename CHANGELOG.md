@@ -1,3 +1,23 @@
+## 0.6.0 (2026-09-24)
+
+### BREAKING CHANGE
+
+- **agents**: removes `get_context_limit_for_provider`, `get_context_config`, `log_context_config`, `DEFAULT_PROVIDER_CONTEXT_LIMITS`, and `PROVIDER_ENV_VARS` from `cnoe_agent_utils.agents.context_config` (and their re-exports). Also drops `MAX_CONTEXT_TOKENS`, `AZURE_OPENAI_MAX_CONTEXT_TOKENS`, `OPENAI_MAX_CONTEXT_TOKENS`, `AWS_BEDROCK_MAX_CONTEXT_TOKENS`, `ANTHROPIC_MAX_CONTEXT_TOKENS`, `GOOGLE_GEMINI_MAX_CONTEXT_TOKENS`, `GCP_VERTEXAI_MAX_CONTEXT_TOKENS`. Use `get_context_limit_for_model(model)` instead.
+- **agents**: removes `BaseLangGraphAgentExecutor`, `BaseStrandsAgentExecutor`, and the `a2a-sdk` dependency / `[a2a]` extra. `disable_a2a_tracing`/`is_a2a_disabled` (tracing) are unaffected.
+
+### Feat
+
+- **agents**: derive agent context limits from the constructed model's own `.profile["max_input_tokens"]` instead of a hand-maintained per-provider table
+
+### Fix
+
+- **aws-bedrock**: degrade gracefully (retry with `base_model_id=""`) when `bedrock:GetInferenceProfile` is denied for an application-inference-profile ARN, instead of failing agent construction
+
+### Build
+
+- upgrade langchain-*, boto3/botocore, langgraph, langchain-core, langchain-mcp-adapters, opentelemetry-*, google-auth, pydantic, tiktoken, typing-extensions, and dev tooling to latest compatible releases; `requires-python` moves to `>=3.14`
+- hold `langfuse` at 3.15.0 and `google-cloud-aiplatform` at 1.165.1 below their breaking 4.x/2.x rewrites, pending dedicated migration follow-up
+
 ## 0.5.1 (2026-09-24)
 
 ### Fix

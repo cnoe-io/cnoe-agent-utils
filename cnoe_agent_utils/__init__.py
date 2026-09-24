@@ -28,14 +28,14 @@ except ImportError:
 
 # Try to import LangGraph agent classes
 try:
-    from .agents import BaseLangGraphAgent, BaseLangGraphAgentExecutor # noqa: F401
+    from .agents import BaseLangGraphAgent # noqa: F401
     _LANGGRAPH_AGENTS_AVAILABLE = True
 except ImportError:
     _LANGGRAPH_AGENTS_AVAILABLE = False
 
 # Try to import Strands agent classes
 try:
-    from .agents import BaseStrandsAgent, BaseStrandsAgentExecutor # noqa: F401
+    from .agents import BaseStrandsAgent # noqa: F401
     _STRANDS_AGENTS_AVAILABLE = True
 except ImportError:
     _STRANDS_AGENTS_AVAILABLE = False
@@ -71,12 +71,10 @@ if _AGENTS_BASE_AVAILABLE:
 if _LANGGRAPH_AGENTS_AVAILABLE:
     __all__.extend([
         'BaseLangGraphAgent',
-        'BaseLangGraphAgentExecutor',
     ])
 
 # Add Strands classes if available
 if _STRANDS_AGENTS_AVAILABLE:
     __all__.extend([
         'BaseStrandsAgent',
-        'BaseStrandsAgentExecutor',
     ])
