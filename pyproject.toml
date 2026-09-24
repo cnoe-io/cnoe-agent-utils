@@ -6,100 +6,100 @@ authors = [
     {name = "CNOE Contributors", email = "cnoe-steering@googlegroups.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13,<4.0"
+requires-python = ">=3.14,<4.0"
 keywords = ["cnoe", "agents", "llm", "tracing", "observability"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "python-dotenv==1.2.2",
-    "langchain-anthropic==1.4.3",
-    "langchain-openai==1.2.2", # Covers both OpenAI and Azure OpenAI
-    "langchain-aws==1.5.0", # Pinned for Bedrock model profiles and prompt caching fixes
-    "langchain-google-genai==4.2.3",
-    "langchain-google-vertexai==3.2.3",
-    "langchain-groq==1.1.2", # Groq integration
-    "boto3==1.43.16",
-    "botocore==1.43.16",
-    "langfuse==3.15.0",
-    "opentelemetry-api==1.42.1",
-    "opentelemetry-sdk==1.42.1",
-    "opentelemetry-exporter-otlp==1.42.1",
-    "google-auth==2.53.0",
-    "google-cloud-aiplatform==1.154.0",
+    "python-dotenv==1.2.3",
+    "langchain-anthropic==1.7.4",
+    "langchain-openai==1.6.6", # Covers both OpenAI and Azure OpenAI
+    "langchain-aws==1.7.9", # Pinned for Bedrock model profiles and prompt caching fixes
+    "langchain-google-genai==4.4.0",
+    "langchain-google-vertexai==3.2.4",
+    "langchain-groq==1.1.3", # Groq integration
+    "boto3==1.43.101",
+    "botocore==1.43.101",
+    "langfuse==3.15.0", # Held below the 4.x rewrite - see CHANGELOG for migration follow-up
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-sdk==1.44.0",
+    "opentelemetry-exporter-otlp==1.44.0",
+    "google-auth==2.58.0",
+    "google-cloud-aiplatform==1.165.1", # Held below the 2.x rewrite - see CHANGELOG for migration follow-up
     # Core agent dependencies - always available
-    "pydantic==2.13.4",
-    "tiktoken==0.13.0",
-    "typing-extensions==4.15.0",
+    "pydantic==2.13.5",
+    "tiktoken==0.14.0",
+    "typing-extensions==4.16.0",
 ]
 
 [project.optional-dependencies]
 # Anthropic Claude dependencies
 anthropic = [
-    "langchain-anthropic==1.4.3",
+    "langchain-anthropic==1.7.4",
 ]
 
 # Development dependencies
 dev = [
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
-    "mypy==2.1.0",
-    "ruff==0.15.14",
-    "pip==26.1.1",
+    "mypy==2.3.1",
+    "ruff==0.16.8",
+    "pip==26.2.1",
     "commitizen==4.13.9",
 ]
 
 # OpenAI-specific dependencies (openai.com)
 openai = [
-    "langchain-openai==1.2.2",
+    "langchain-openai==1.6.6",
 ]
 
 # Azure OpenAI dependencies (Azure-hosted OpenAI models)
 azure = [
-    "langchain-openai==1.2.2",
+    "langchain-openai==1.6.6",
 ]
 
 # AWS-specific dependencies
 aws = [
-    "langchain-aws==1.5.0",
-    "boto3==1.43.16",
-    "botocore==1.43.16",
+    "langchain-aws==1.7.9",
+    "boto3==1.43.101",
+    "botocore==1.43.101",
 ]
 
 # Tracing and observability dependencies
 tracing = [
     "langfuse==3.15.0",
-    "opentelemetry-api==1.42.1",
-    "opentelemetry-sdk==1.42.1",
-    "opentelemetry-exporter-otlp==1.42.1",
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-sdk==1.44.0",
+    "opentelemetry-exporter-otlp==1.44.0",
 ]
 
 # Google Cloud dependencies
 gcp = [
-    "langchain-google-genai==4.2.3",
-    "langchain-google-vertexai==3.2.3",
-    "google-auth==2.53.0",
-    "google-cloud-aiplatform==1.154.0",
+    "langchain-google-genai==4.4.0",
+    "langchain-google-vertexai==3.2.4",
+    "google-auth==2.58.0",
+    "google-cloud-aiplatform==1.165.1",
 ]
 
 # Agent framework dependencies
 agents = [
-    "pydantic==2.13.4",
-    "tiktoken==0.13.0",
-    "typing-extensions==4.15.0",
+    "pydantic==2.13.5",
+    "tiktoken==0.14.0",
+    "typing-extensions==4.16.0",
 ]
 
 # LangGraph agent dependencies
 langgraph = [
-    "langgraph==1.2.2",
-    "langchain-core==1.4.0",
-    "langchain-mcp-adapters==0.2.2",
+    "langgraph==1.2.12",
+    "langchain-core==1.6.5",
+    "langchain-mcp-adapters==0.3.2",
 ]
 
 # Strands agent dependencies
@@ -109,60 +109,60 @@ strands = [
 
 # A2A protocol dependencies for agent executors
 a2a = [
-    "a2a-sdk==1.0.3",
+    "a2a-sdk==1.1.5",
 ]
 
 # Complete agent stack (all agent frameworks)
 agents-all = [
-    "pydantic==2.13.4",
-    "tiktoken==0.13.0",
-    "typing-extensions==4.15.0",
-    "langgraph==1.2.2",
-    "langchain-core==1.4.0",
-    "langchain-mcp-adapters==0.2.2",
+    "pydantic==2.13.5",
+    "tiktoken==0.14.0",
+    "typing-extensions==4.16.0",
+    "langgraph==1.2.12",
+    "langchain-core==1.6.5",
+    "langchain-mcp-adapters==0.3.2",
     "strands==0.1.0",
-    "a2a-sdk==1.0.3",
+    "a2a-sdk==1.1.5",
 ]
 
 # Groq dependencies
 groq = [
-    "langchain-groq==1.1.2"
+    "langchain-groq==1.1.3"
 ]
 
 
 [build-system]
-requires = ["hatchling==1.29.0"]
+requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
-    "mypy==2.1.0",
-    "ruff==0.15.14",
-    "pip==26.1.1",
+    "mypy==2.3.1",
+    "ruff==0.16.8",
+    "pip==26.2.1",
     "commitizen==4.13.9",
     "dotenv==0.9.9",
     # Include optional dependencies for testing
-    "langchain-anthropic==1.4.3",
-    "langchain-openai==1.2.2",
-    "langchain-aws==1.5.0",
-    "langchain-google-genai==4.2.3",
-    "langchain-google-vertexai==3.2.3",
-    "boto3==1.43.16",
-    "botocore==1.43.16",
+    "langchain-anthropic==1.7.4",
+    "langchain-openai==1.6.6",
+    "langchain-aws==1.7.9",
+    "langchain-google-genai==4.4.0",
+    "langchain-google-vertexai==3.2.4",
+    "boto3==1.43.101",
+    "botocore==1.43.101",
     "langfuse==3.15.0",
-    "opentelemetry-api==1.42.1",
-    "opentelemetry-sdk==1.42.1",
-    "opentelemetry-exporter-otlp==1.42.1",
-    "google-auth==2.53.0",
-    "google-cloud-aiplatform==1.154.0",
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-sdk==1.44.0",
+    "opentelemetry-exporter-otlp==1.44.0",
+    "google-auth==2.58.0",
+    "google-cloud-aiplatform==1.165.1",
     # Agent dependencies for testing
-    "pydantic==2.13.4",
-    "tiktoken==0.13.0",
-    "typing-extensions==4.15.0",
-    "langgraph==1.2.2",
-    "langchain-core==1.4.0",
-    "langchain-mcp-adapters==0.2.2",
+    "pydantic==2.13.5",
+    "tiktoken==0.14.0",
+    "typing-extensions==4.16.0",
+    "langgraph==1.2.12",
+    "langchain-core==1.6.5",
+    "langchain-mcp-adapters==0.3.2",
 ]

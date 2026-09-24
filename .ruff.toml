@@ -311,6 +311,7 @@ ignore = [
   "RUF013",
   "RUF022",
   "RUF059",
+  "RUF069",  # preview rule; flags literal pass-through equality checks, not float arithmetic
   "S110",
   "SIM114",
   "SIM115",

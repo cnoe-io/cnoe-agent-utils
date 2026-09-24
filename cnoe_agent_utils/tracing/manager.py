@@ -23,6 +23,8 @@ After:
     config = tracing.create_config(context_id)  # Includes callbacks if enabled
 """
 
+from __future__ import annotations
+
 import os
 import logging
 from typing import Optional, Any, Dict
@@ -43,9 +45,9 @@ class TracingManager:
     - Graceful degradation when dependencies unavailable
     """
 
-    _instance: Optional['TracingManager'] = None
+    _instance: Optional[TracingManager] = None
 
-    def __new__(cls) -> 'TracingManager':
+    def __new__(cls) -> TracingManager:
         """Singleton pattern to prevent multiple langfuse initializations."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -169,7 +171,7 @@ class TracingManager:
         trace_id: Optional[str] = None,
         trace_name: Optional[str] = None,
         update_input: bool = True
-    ) -> 'LangfuseSpanContextManager | NoOpSpanContextManager':
+    ) -> LangfuseSpanContextManager | NoOpSpanContextManager:
         """
         Start a new trace span if tracing is enabled.
 
@@ -231,7 +233,7 @@ class LangfuseSpanContextManager:
         self._context = None
         self._span = None
 
-    def __enter__(self) -> 'LangfuseSpanContextManager':
+    def __enter__(self) -> LangfuseSpanContextManager:
         # Create the context manager
         trace_context = {"trace_id": self.trace_id} if self.trace_id else {}
         self._context = self.langfuse_client.start_as_current_span(
@@ -293,7 +295,7 @@ class LangfuseSpanContextManager:
 class NoOpSpanContextManager:
     """No-operation span context manager for when tracing is disabled."""
 
-    def __enter__(self) -> 'NoOpSpanContextManager':
+    def __enter__(self) -> NoOpSpanContextManager:
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:

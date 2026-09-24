@@ -254,7 +254,6 @@ class TestLLMFactoryErrorMessages:
         with patch('cnoe_agent_utils.llm_factory._LANGCHAIN_GROQ_AVAILABLE', False):
             with pytest.raises(ImportError, match="pip install 'cnoe-agent-utils\\[groq\\]'"):
                 factory._build_groq_llm(None, None)
-                factory._build_gcp_vertexai_llm(None, None)
 
 class TestLLMFactoryIntegration:
     """Integration tests for the LLM factory."""
