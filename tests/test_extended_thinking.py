@@ -10,6 +10,7 @@ from cnoe_agent_utils.llm_factory import (
   _parse_thinking_budget,
   THINKING_DEFAULT_BUDGET,
   THINKING_MIN_BUDGET,
+  THINKING_RESPONSE_HEADROOM,
   ThinkingConfig,
 )
 
@@ -255,6 +256,134 @@ class TestAnthropicExtendedThinking:
       assert hasattr(llm, "model_kwargs")
       assert "thinking_budget" in llm.model_kwargs
       assert llm.model_kwargs["thinking_budget"] == 9999
+
+
+class TestThinkingMaxTokensDefault:
+  """Regression tests: a manual thinking budget must never be sent without an
+  explicit max_tokens greater than it, even when the caller never passes
+  max_tokens (see THINKING_RESPONSE_HEADROOM)."""
+
+  def test_bedrock_env_thinking_sets_max_tokens_above_budget(self):
+    """Manual-thinking Bedrock models must get an explicit max_tokens instead
+    of relying on the chat model's own default, which can be <= budget_tokens."""
+    factory = LLMFactory("aws-bedrock")
+
+    with patch.dict(
+      os.environ,
+      {
+        "AWS_BEDROCK_MODEL_ID": "anthropic.claude-4-sonnet",
+        "AWS_REGION": "us-east-1",
+        "AWS_ACCESS_KEY_ID": "test-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret",
+        "AWS_BEDROCK_THINKING_ENABLED": "true",
+        "AWS_BEDROCK_THINKING_BUDGET": "5000",
+      },
+      clear=False,
+    ):
+      llm = factory._build_aws_bedrock_llm(None, 0.0)
+      thinking = _get_thinking_config(llm)
+      assert thinking["budget_tokens"] == 5000
+      assert llm.max_tokens == 5000 + THINKING_RESPONSE_HEADROOM
+
+  def test_bedrock_reasoning_effort_manual_thinking_sets_max_tokens(self):
+    """A caller using reasoning_effort with a manual-thinking model family
+    (e.g. Claude Sonnet/Haiku 4.x) must not send budget_tokens >= max_tokens."""
+    factory = LLMFactory("aws-bedrock")
+
+    with patch.dict(
+      os.environ,
+      {
+        "AWS_BEDROCK_MODEL_ID": "anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "AWS_REGION": "us-east-1",
+        "AWS_ACCESS_KEY_ID": "test-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret",
+      },
+      clear=False,
+    ):
+      llm = factory._build_aws_bedrock_llm(None, 0.0, reasoning_effort="medium")
+      thinking = _get_thinking_config(llm)
+      assert thinking["budget_tokens"] == 4096
+      assert llm.max_tokens is not None
+      assert llm.max_tokens > thinking["budget_tokens"]
+
+  def test_bedrock_explicit_max_tokens_is_not_overridden(self):
+    """An explicit max_tokens from the caller must be preserved, not replaced
+    by the derived default."""
+    factory = LLMFactory("aws-bedrock")
+
+    with patch.dict(
+      os.environ,
+      {
+        "AWS_BEDROCK_MODEL_ID": "anthropic.claude-4-sonnet",
+        "AWS_REGION": "us-east-1",
+        "AWS_ACCESS_KEY_ID": "test-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret",
+        "AWS_BEDROCK_THINKING_ENABLED": "true",
+        "AWS_BEDROCK_THINKING_BUDGET": "3000",
+      },
+      clear=False,
+    ):
+      llm = factory._build_aws_bedrock_llm(None, 0.0, max_tokens=8000)
+      assert llm.max_tokens == 8000
+
+  def test_bedrock_adaptive_thinking_leaves_max_tokens_unset(self):
+    """Adaptive-thinking models (e.g. Claude Sonnet 5) never send an explicit
+    budget_tokens, so they must not be affected by the max_tokens default."""
+    factory = LLMFactory("aws-bedrock")
+
+    with patch.dict(
+      os.environ,
+      {
+        "AWS_BEDROCK_MODEL_ID": "anthropic.claude-sonnet-5-20260101-v1:0",
+        "AWS_REGION": "us-east-1",
+        "AWS_ACCESS_KEY_ID": "test-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret",
+      },
+      clear=False,
+    ):
+      llm = factory._build_aws_bedrock_llm(None, 0.0, reasoning_effort="medium")
+      thinking = _get_thinking_config(llm)
+      assert thinking == {"type": "adaptive"}
+      # No manual budget_tokens is ever sent for adaptive thinking, so there is
+      # nothing for _ensure_max_tokens_for_thinking to react to; whatever
+      # max_tokens ends up set is untouched by this fix.
+      assert "budget_tokens" not in thinking
+
+  def test_anthropic_env_thinking_sets_max_tokens_above_budget(self):
+    """Manual-thinking Anthropic models must get an explicit max_tokens
+    instead of relying on the chat model's own default."""
+    factory = LLMFactory("anthropic-claude")
+
+    with patch.dict(
+      os.environ,
+      {
+        "ANTHROPIC_API_KEY": "test-key",
+        "ANTHROPIC_MODEL_NAME": "claude-4-sonnet-20250514",
+        "ANTHROPIC_THINKING_ENABLED": "true",
+        "ANTHROPIC_THINKING_BUDGET": "6000",
+      },
+      clear=False,
+    ):
+      llm = factory._build_anthropic_claude_llm(None, 0.0)
+      assert llm.model_kwargs["thinking_budget"] == 6000
+      assert llm.max_tokens == 6000 + THINKING_RESPONSE_HEADROOM
+
+  def test_anthropic_explicit_max_tokens_is_not_overridden(self):
+    """An explicit max_tokens from the caller must be preserved."""
+    factory = LLMFactory("anthropic-claude")
+
+    with patch.dict(
+      os.environ,
+      {
+        "ANTHROPIC_API_KEY": "test-key",
+        "ANTHROPIC_MODEL_NAME": "claude-4-sonnet-20250514",
+        "ANTHROPIC_THINKING_ENABLED": "true",
+        "ANTHROPIC_THINKING_BUDGET": "3000",
+      },
+      clear=False,
+    ):
+      llm = factory._build_anthropic_claude_llm(None, 0.0, max_tokens=9000)
+      assert llm.max_tokens == 9000
 
 
 class TestVertexAIExtendedThinking:
