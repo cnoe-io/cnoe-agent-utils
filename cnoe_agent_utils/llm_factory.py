@@ -197,6 +197,15 @@ def _build_anthropic_timeout(read_timeout: int | None) -> float | None:
 THINKING_DEFAULT_BUDGET = 1024
 THINKING_MIN_BUDGET = 1024
 
+# Headroom reserved for a model's visible response once its manual thinking
+# budget is spent. Anthropic rejects `max_tokens <= thinking.budget_tokens`;
+# if a caller enables extended thinking without passing `max_tokens`, there is
+# nothing for `_clamp_claude_thinking_budget` to clamp against, and the
+# underlying LangChain chat model falls back to its own default output limit
+# — which can be at or below the thinking budget alone. This is added on top
+# of the thinking budget to derive an explicit `max_tokens` instead.
+THINKING_RESPONSE_HEADROOM = 4096
+
 ReasoningEffort = Literal["low", "medium", "high", "max"]
 REASONING_EFFORTS: tuple[ReasoningEffort, ...] = ("low", "medium", "high", "max")
 _THINKING_BUDGETS: dict[ReasoningEffort, int] = {
@@ -487,6 +496,25 @@ def _parse_thinking_budget(env_var: str, max_tokens: Optional[int] = None) -> in
         thinking_budget = THINKING_MIN_BUDGET
 
     return _clamp_claude_thinking_budget(thinking_budget, max_tokens)
+
+
+def _ensure_max_tokens_for_thinking(
+    target: Dict[str, Any],
+    thinking_budget: int,
+) -> None:
+    """Set an explicit `max_tokens` when the caller didn't pass one.
+
+    Only `_clamp_claude_thinking_budget` knows to shrink `thinking_budget` to
+    fit under a known `max_tokens`; when the caller never set one, that
+    clamp is a no-op and `target` is left without `max_tokens` at all. The
+    LangChain chat model then applies its own default, which is not
+    guaranteed to exceed `thinking_budget` and can trigger a 400 from the
+    provider. Deriving `max_tokens` here keeps the outcome deterministic.
+    """
+    if target.get("max_tokens") is not None:
+        return
+    target["max_tokens"] = thinking_budget + THINKING_RESPONSE_HEADROOM
+
 
 class LLMFactory:
   """Factory that returns a *ready‑to‑use* LangChain chat model.
@@ -863,6 +891,7 @@ class LLMFactory:
           thinking_budget,
           max_tokens_limit,
         )
+        _ensure_max_tokens_for_thinking(common_args, thinking_budget)
 
         thinking_config: ThinkingConfig = {
           "type": "enabled",
@@ -1037,6 +1066,7 @@ class LLMFactory:
           thinking_budget,
           max_tokens_limit,
         )
+        _ensure_max_tokens_for_thinking(kwargs, thinking_budget)
         model_kwargs["thinking_budget"] = thinking_budget
         logging.info(
           "[LLM] Extended thinking configured with thinking_budget=%s",
