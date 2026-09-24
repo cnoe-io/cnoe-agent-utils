@@ -755,7 +755,7 @@ class LLMFactory:
         "AWS Bedrock support requires langchain-aws. "
         "Install with: pip install 'cnoe-agent-utils[aws]'"
       )
-    from langchain_aws import ChatAnthropicBedrock, ChatBedrock, ChatBedrockConverse
+    from langchain_aws import ChatAnthropicBedrock, ChatBedrock
     from botocore.config import Config as BotocoreConfig
     aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -991,7 +991,7 @@ class LLMFactory:
         common_args["model_kwargs"] = model_kwargs
       else:
         common_args.pop("model_kwargs", None)
-      llm = ChatBedrockConverse(**common_args)
+      llm = self._construct_bedrock_converse(common_args, model_id)
       logging.info("[LLM] Using ChatBedrockConverse with native prompt caching support")
     else:
       # ChatBedrock supports streaming and needs beta_use_converse_api.
@@ -1005,6 +1005,41 @@ class LLMFactory:
       logging.info("[LLM] Using ChatBedrock")
 
     return llm
+
+  def _construct_bedrock_converse(self, common_args: dict, model_id: str):
+    """Build ChatBedrockConverse, degrading gracefully if GetInferenceProfile is denied.
+
+    For an application-inference-profile ARN, langchain-aws calls
+    bedrock:GetInferenceProfile to resolve the underlying foundation model
+    (for tool-choice/streaming support and its .profile, which drives
+    context-window detection). That call isn't wrapped in a try/except
+    upstream, so if the IAM role only grants bedrock:InvokeModel and not
+    bedrock:GetInferenceProfile, construction raises instead of falling
+    back. AWS_BEDROCK_BASE_MODEL_ID already bypasses the lookup entirely if
+    set; this retries once with base_model_id="" to get the same bypass
+    automatically, without needing that env var, when the API call fails.
+    """
+    from langchain_aws import ChatBedrockConverse
+    from botocore.exceptions import ClientError
+
+    if common_args.get("base_model_id") or "application-inference-profile" not in model_id:
+      return ChatBedrockConverse(**common_args)
+
+    try:
+      return ChatBedrockConverse(**common_args)
+    except ClientError as exc:
+      error_code = exc.response.get("Error", {}).get("Code", "")
+      if error_code not in {"AccessDeniedException", "AccessDenied"}:
+        raise
+      logging.warning(
+        "[LLM] bedrock:GetInferenceProfile denied for %s; continuing without a "
+        "resolved base model (context-window auto-detection falls back to a "
+        "generic default). Grant the permission, or set AWS_BEDROCK_BASE_MODEL_ID "
+        "to the underlying foundation model ID, to restore it.",
+        model_id,
+      )
+      degraded_args = dict(common_args, base_model_id="")
+      return ChatBedrockConverse(**degraded_args)
 
   def _build_anthropic_claude_llm(
     self,
