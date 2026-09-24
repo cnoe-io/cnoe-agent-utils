@@ -1,3 +1,9 @@
+## 0.5.1 (2026-09-24)
+
+### Fix
+
+- **llm**: keep max_tokens above manual thinking budgets
+
 ## 0.5.0 (2026-09-22)
 
 ### Feat
