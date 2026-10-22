@@ -1,3 +1,9 @@
+## 0.5.2 (2026-10-22)
+
+### Docs
+
+- mark this as the final release and document that the project is unmaintained
+
 ## 0.5.1 (2026-09-24)
 
 ### Fix

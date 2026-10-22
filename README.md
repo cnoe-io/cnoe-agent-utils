@@ -1,6 +1,6 @@
 # 🤖 cnoe-agent-utils
 
-> **Deprecated — no longer maintained (October 22, 2026).** This repository has been archived and will receive no further releases, bug fixes, or security updates. Do not use it for new projects. Existing PyPI distributions remain available as-is. CAIPE users should migrate to the shared [`llm_wrapper`](https://github.com/caipe-io/ai-platform-engineering/tree/main/ai_platform_engineering/llm_wrapper); other users should use provider integrations they can maintain. Issues and pull requests are no longer monitored.
+> **Deprecated — final release 0.5.2 (October 22, 2026).** This project is no longer maintained and will receive no further releases, bug fixes, or security updates. Do not use it for new projects. Existing PyPI distributions remain available as-is. CAIPE users should migrate to the shared [`llm_wrapper`](https://github.com/caipe-io/ai-platform-engineering/tree/main/ai_platform_engineering/llm_wrapper); other users should use provider integrations they can maintain. Issues and pull requests are no longer monitored.
 
 [![PyPI version](https://img.shields.io/pypi/v/cnoe-agent-utils.svg)](https://pypi.org/project/cnoe-agent-utils/)
 [![Unit Tests](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/cnoe-io/cnoe-agent-utils/actions/workflows/unit-tests.yml)
